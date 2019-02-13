@@ -417,8 +417,8 @@ The assignment problem is given by the following ILP:
 \underset{\begin{array}{c}
 x_{k}^{q}[i,j],\thinspace\forall i,j\in\{1,\ldots,n_{\textrm{cell}}\},\\
 \forall k\in\{1,\ldots,F\},\thinspace q\in\{1,\ldots,Q\}
-\end{array}}{\textrm{maximize}} & \sum_{k\in\{1,\ldots F\}}\left(\left(\sum_{j\in n_{\textrm{cell}}}\left(\sum_{q\in\{1,\ldots,Q\}}\left(R_{k}^{q}[j]\sum_{i\in n_{\textrm{cell}}}x_{k}^{q}[i,j]\right)\right)\right)\right.\nonumber \\
- & \qquad\qquad-\left.\left(\sum_{q\in\{1,\ldots,Q\}}\left(\sum_{i\in n_{\textrm{cell}}}\sum_{j\in n_{\textrm{cell}}}C_{k}^{q}[i,j]\thinspace x_{k}^{q}[i,j]\right)\right)\right)
+\end{array}}{\textrm{maximize}} & \sum_{k\in\{1,\ldots F\}}\left(\left(\sum_{j\in\{1,\ldots,n_{\textrm{cell}}\}}\left(\sum_{q\in\{1,\ldots,Q\}}\left(R_{k}^{q}[j]\sum_{i\in\{1,\ldots,n_{\textrm{cell}}\}}x_{k}^{q}[i,j]\right)\right)\right)\right.\nonumber \\
+ & \qquad\qquad-\left.\left(\sum_{q\in\{1,\ldots,Q\}}\left(\sum_{i\in\{1,\ldots,n_{\textrm{cell}}\}}\sum_{j\in\{1,\ldots,n_{\textrm{cell}}\}}C_{k}^{q}[i,j]\thinspace x_{k}^{q}[i,j]\right)\right)\right)
 \end{align}
 
 \begin{align}
@@ -447,8 +447,8 @@ We could also state this problem as a LP:
 \underset{\begin{array}{c}
 x_{k}^{q}[i,j],\thinspace\forall i,j\in\{1,\ldots,n_{\textrm{cell}}\},\\
 \forall k\in\{1,\ldots,F\},\thinspace q\in\{1,\ldots,Q\}
-\end{array}}{\textrm{maximize}} & \sum_{k\in\{1,\ldots F\}}\left(\left(\sum_{j\in n_{\textrm{cell}}}\left(\sum_{q\in\{1,\ldots,Q\}}\left(R_{k}^{q}[j]\sum_{i\in n_{\textrm{cell}}}x_{k}^{q}[i,j]\right)\right)\right)\right.\nonumber \\
- & \qquad\qquad-\left.\left(\sum_{q\in\{1,\ldots,Q\}}\left(\sum_{i\in n_{\textrm{cell}}}\sum_{j\in n_{\textrm{cell}}}C_{k}^{q}[i,j]\thinspace x_{k}^{q}[i,j]\right)\right)\right)
+\end{array}}{\textrm{maximize}} & \sum_{k\in\{1,\ldots F\}}\left(\left(\sum_{j\in\{1,\ldots,n_{\textrm{cell}}\}}\left(\sum_{q\in\{1,\ldots,Q\}}\left(R_{k}^{q}[j]\sum_{i\in\{1,\ldots,n_{\textrm{cell}}\}}x_{k}^{q}[i,j]\right)\right)\right)\right.\nonumber \\
+ & \qquad\qquad-\left.\left(\sum_{q\in\{1,\ldots,Q\}}\left(\sum_{i\in\{1,\ldots,n_{\textrm{cell}}\}}\sum_{j\in\{1,\ldots,n_{\textrm{cell}}\}}C_{k}^{q}[i,j]\thinspace x_{k}^{q}[i,j]\right)\right)\right)
 \end{align}
 
 \begin{align}
