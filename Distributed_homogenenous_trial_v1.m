@@ -1,4 +1,6 @@
-% Trial to find error in distributed homogenenous
+%% Trial to find error in distributed homogenenous
+
+close all, clear all, clc
 
 num_trial_runs = 50;
 
@@ -234,7 +236,7 @@ for n_tr = 1:1:num_trial_runs
                     for this_bin_y = (center_bin(2) - ceil(2*intruder_step_size)):1:(center_bin(2) + ceil(2*intruder_step_size))
                         count = count + 1;
                         
-                        culmulative_bin_to = func_culmulative_bin(this_bin_x,this_bin_y,grid_num_x,grid_num_y);
+                        culmulative_bin_to = func_culmulative_bin(this_bin_x+center_bin(1),this_bin_y+center_bin(2),grid_num_x,grid_num_y);
                         
                         if culmulative_bin_to ~= 0
                             trans_prob_matrix(culmulative_bin_to,culmulative_bin_from) = trans_prob_table(count,3);
@@ -389,8 +391,9 @@ end
 save('find_error_dist_homo.mat')
 
 %% Load and recheck those with actual error
+close all, clear all, clc
 
-load('find_error_dist_homo_16thSept.mat')
+load('find_error_dist_homo_19thSept.mat')
 
 disp(count_actual_error)
 
@@ -430,8 +433,9 @@ disp(counter)
 
 
 %% Load and recheck those that did not converge
+close all, clear all, clc
 
-load('find_error_dist_homo_16thSept.mat')
+load('find_error_dist_homo_19thSept.mat')
 
 disp(count_no_convergence)
 
@@ -470,8 +474,9 @@ end
 disp(counter)
 
 %% Load and recheck randomly
+close all, clear all, clc
 
-load('find_error_dist_homo_16thSept.mat')
+load('find_error_dist_homo_19thSept.mat')
 
 sol_val = ceil(rand*count_actual_error)
 

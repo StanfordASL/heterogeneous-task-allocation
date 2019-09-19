@@ -57,7 +57,7 @@ flag_use_stored_random_numbers = 0; % If set to 1 if you want to use stored rand
 threshold_max_distance = 2;
 
 % Flag for task allocation type
-flag_type_task_allocation = 5; % 1 = Dumb Hurestic 1, 2 = Dumb Hurestic 2, 3 = Centralized Table II, 4 = Distributed PFSF, Centralized Homogeneous, 5 = Distributed PFSF, Distributed Homogeneous,
+flag_type_task_allocation = 3; % 1 = Dumb Hurestic 1, 2 = Dumb Hurestic 2, 3 = Centralized Table II, 4 = Distributed PFSF, Centralized Homogeneous, 5 = Distributed PFSF, Distributed Homogeneous,
 
 % Time Horizon Window
 time_horizon = 3; % integer >= 0
@@ -224,7 +224,7 @@ for t=1:1:t_final
                     for this_bin_y = (center_bin(2) - ceil(2*intruder_step_size)):1:(center_bin(2) + ceil(2*intruder_step_size))
                         count = count + 1;
                         
-                        culmulative_bin_to = func_culmulative_bin(this_bin_x,this_bin_y,grid_num_x,grid_num_y);
+                        culmulative_bin_to = func_culmulative_bin(this_bin_x+center_bin(1),this_bin_y+center_bin(2),grid_num_x,grid_num_y);
                         
                         if culmulative_bin_to ~= 0
                             trans_prob_matrix(culmulative_bin_to,culmulative_bin_from) = trans_prob_table(count,3);

@@ -102,7 +102,7 @@ while flag_convergence_satisfied == 0
     
     % added for breaking no conv solutions
     if count == 3000
-        %         homo_reward = 0;
+        homo_reward = 0;
         break
     end
     
