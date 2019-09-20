@@ -1,6 +1,8 @@
 # distributed-task-allocation
 Prototyping code for distributed task allocation
 
-`predictive_task_allocation_v12.m` is the latest code, that implements the algorithm in the paper
+## MATLAB implementation
+The MATLAB implementation of the code is by Saptarshi Bandyopadhyay. It is contained in the `/matlab` folder.
 
-All the variables that can be set by the user are in the `Initialize by User` section
+## Python implementation
+A Python implementation of the code by Kiril Solovey and Federico Rossi is available in the `python/src` folder.

@@ -243,4 +243,6 @@ TSWLatexianTemp*
 
 # video
 *.mp4
+# MacOS garbage
+.DS_Store
 
