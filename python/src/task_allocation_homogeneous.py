@@ -232,12 +232,17 @@ class abstract_lp_homogeneous_centralized(object):
                 for start_location in self.network.nodes():
                     for end_location in self.network.successors(start_location):
                         if self.Xval[agent_type][agent][start_location][end_location][time] != 0:
+                            if abs(self.Xval[agent_type][agent][start_location][end_location][time] - 1) > 1e-3:
+                                print("WARNING: non-integer solution")
+                                import pdb
+                                pdb.set_trace()
                             trajectory.append(
                                 (time, (start_location, end_location)))
                             if len(locs) == 0:
                                 locs.append(start_location)
                             else:
                                 assert locs[-1] == start_location, "ERROR: discontinuous trajectory"
+
                             locs.append(end_location)
 
             agent_trajectories[agent] = {
@@ -267,6 +272,7 @@ class cplex_lp_homogeneous_centralized(abstract_lp_homogeneous_centralized):
         problem.objective.set_sense(problem.objective.sense.maximize)
         if self.linear_program is True:
             problem.set_problem_type(problem.problem_type.LP)
+            problem.parameters.barrier.crossover = 1
         else:
             problem.set_problem_type(problem.problem_type.MILP)
         return problem

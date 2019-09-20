@@ -3,29 +3,35 @@
  United  States  Government  sponsorship  acknowledged.   Any commercial use
  must   be  negotiated  with  the  Office  of  Technology  Transfer  at  the
  California Institute of Technology.
- 
+
  This software may be subject to  U.S. export control laws  and regulations.
  By accepting this document,  the user agrees to comply  with all applicable
  U.S. export laws and regulations.  User  has the responsibility  to  obtain
  export  licenses,  or  other  export  authority  as may be required  before
  exporting  such  information  to  foreign  countries or providing access to
  foreign persons.
- 
+
  This  software  is a copy  and  may not be current.  The latest  version is
  maintained by and may be obtained from the Mobility  and  Robotics  Sytstem
  Section (347) at the Jet  Propulsion  Laboratory.   Suggestions and patches
  are welcome and should be sent to the software's maintainer.
- 
+
 """
 try:
     import cplex
 except:
     raise ImportWarning(
         "WARNING: CPLEX not available. You will probably want to use another module")
+import numpy as np
+import copy
 
 
 class abstract_distributed_task_allocation_subroutine(object):
-    def __init__(self, network, rewards, agents, lagrangian, verbose=False, linear_program=False):
+    '''
+    Implementation of Problem 4 in the paper: single-agent optimization subroutine for homogeneous task allocation.
+    '''
+
+    def __init__(self, network, rewards, agents, lagrangian, verbose=False, linear_program=True):
         '''
         Initialize the optimization problem.
         @ param network A networkx network containing the locations the agents can visit and their connections.
@@ -390,3 +396,177 @@ class cplex_distributed_task_allocation_subroutine(abstract_distributed_task_all
         self.Zval = Zval
         self.solved = True
         return opt_val, Xval, Zval, duals
+
+
+def distributed_task_allocation_sim(network, rewards, agents, alpha=0.01, alpha_decay=1., error_tolerance=0.01, reward_tolerance=0.01, verbose=False, linear_program=True):
+    '''
+    Solve the homogeneous task allocation problem through dual decomposition by leveraging the
+    individual agents' optimization subroutine.
+
+    @ param network A networkx network containing the locations the agents can visit and their connections.
+    @ param rewards A nested dictionary containing the task rewards. The dictionary has two keys.
+                    The first key denotes the location of the task.
+                    The second key denotes the time at which the task is performed.
+                    rewards[location][time] is the reward for performing task(s)
+                    at location location at time time.
+    @ param agents A list containing the description of the agents.
+                    Each entry is a tuple of agent descriptions.
+                    Each agent's description is a tuple with two entries, the agent's name and the initial location of the agent.
+    @ param alpha  The step size of the dual decomposition algorithm.
+    @ param alpha_decay The decay of the step size. At each step, alpha=alpha**alpha_decay.
+    @ param error_tolerance  The absolute tolerance of the error. The algorithm will stop when the error is lower than this
+                                and the reward condition below is satisfied.
+    @ param reward_tolerance   The relative tolerance of the reward. The algorithm will stop when the relative change in reward is
+                                smaller than this and the error condition above is satisfied.
+    @ param verbose (Boolean) sets the verbosity of the problem
+    @ param linear_program (Boolean) sets whether to solve the problem as a MILP or a LP
+    The function asserts that the "location" and "task_type" keys in rewards and initial_locations be the same.
+    '''
+
+    def _compute_reward(rewards, Z_all):
+        rew = 0.
+        for agent in agents:
+            for location in locations:
+                for time in time_horizon:
+                    rew += Z_all[agent_type][agent][location][time] * \
+                        rewards[location][time]
+        return rew
+
+    def _verbprint(msg):
+        if verbose:
+            print(msg)
+
+    _verbprint("  Initializing")
+
+    # Infer locations and check for consistency
+    locations = list(network.nodes)
+    assert locations == list(rewards.keys(
+    )), "ERROR: locations do not match (rewards)"
+    for agent in agents:
+        assert agent[1] in locations,  "ERROR: locations for agent {} do not match (initial_locations)".format(
+            agent)
+    assert list(rewards.keys(
+    )) == locations, "ERROR: locations do not match (task_types)"
+
+    # Infer time horizon and check for consistency
+    assert len(locations)
+    time_horizon = list(rewards[locations[0]].keys())
+    for location in locations:
+        assert time_horizon == list(
+            rewards[location].keys()), "ERROR: inconsistent time horizon"
+
+    # Common Lagrangian is initialized to zero
+    lagrangian = {}
+    for location in locations:
+        lagrangian[location] = {}
+        for time in time_horizon:
+            lagrangian[location][time] = 0.
+
+    # Error is initialized to something big
+    error = {}
+    for location in locations:
+        error[location] = {}
+        for time in time_horizon:
+            error[location][time] = np.infty
+    error_norm = 2*error_tolerance
+    # Collective solution is initialized to zero
+    Z_all = {}
+    agent_type = 'C'
+    Z_all[agent_type] = {}
+    for agent in agents:
+        Z_all[agent_type][agent] = {}
+        for location in locations:
+            Z_all[agent_type][agent][location] = {}
+            for time in time_horizon:
+                Z_all[agent_type][agent][location][time] = 0.
+
+    # Iterate!
+    previous_reward = -np.infty
+    current_reward = -1
+
+    # While we haven't converged
+    iteration_counter = 0
+    while ((error_norm > error_tolerance) or ((np.linalg.norm(current_reward-previous_reward)/current_reward) > reward_tolerance)):
+        _verbprint(
+            f"Iteration {iteration_counter}, error {error_norm}, change in reward {(np.linalg.norm(current_reward-previous_reward)/current_reward)}%")
+        iteration_counter += 1
+        # Every agent solves the optimization problem
+        agent_trajectories = {}
+        for agent_id, agent in enumerate(agents):
+            agents_distributed = [agents[agent_id]]
+            problem = cplex_distributed_task_allocation_subroutine(
+                network=network,
+                rewards=rewards,
+                agents=agents_distributed,
+                lagrangian=lagrangian,
+                verbose=False,
+            )
+            opt_val, Xval, Zval, duals = problem.solve()
+            # Agents broadcast their values
+            Z_all[agent_type][agent] = Zval[agent_type][agent]
+            agent_trajectory = problem.compute_trajectories()
+            agent_trajectories.update(agent_trajectory)
+
+        # Compute the error
+        agents_performing_task = {}
+        for location in locations:
+            agents_performing_task[location] = {}
+            for time in time_horizon:
+                agents_performing_task[location][time] = 0.
+        for agent in agents:
+            for location in locations:
+                for time in time_horizon:
+                    agents_performing_task[location][time] += Z_all[agent_type][agent][location][time]
+
+        def _error_map(val):
+            if val < 1:
+                return 0.
+            else:
+                return val-1.
+        error = _nested_dict_map(
+            agents_performing_task, map_function=_error_map)
+        error_norm = _nested_dict_reduce(error)
+        if (error_norm) > 100:
+            import pdb
+            pdb.set_trace()
+
+        # Agents also compute the reward collected
+        previous_reward = current_reward
+        current_reward = _compute_reward(rewards, Z_all)
+
+        # Agents update the Lagrangian
+        for location in locations:
+            for time in time_horizon:
+                lagrangian[location][time] = max(
+                    0., lagrangian[location][time] + alpha*error[location][time])
+
+        # Update alpha
+        alpha = alpha**alpha_decay
+        # And iterate
+
+    _verbprint(
+        f"Finished at iteration {iteration_counter-1}, error {error_norm}, change in reward {(np.linalg.norm(current_reward-previous_reward)/current_reward)}%")
+    _verbprint(f"({error_norm} > {error_tolerance})")
+    _verbprint(
+        f"((np.linalg.norm({current_reward}-{previous_reward})/{current_reward}) > {reward_tolerance})")
+    return agent_trajectories
+
+
+def _nested_dict_reduce(_dict, reduce_function=np.linalg.norm, cum_reduce=0., ):
+    for val in _dict.values():
+        if type(val) is dict:
+            cum_reduce += _nested_dict_reduce(val,
+                                              reduce_function=reduce_function, cum_reduce=0.)
+        else:
+            cum_reduce += reduce_function(val)
+    return cum_reduce
+
+
+def _nested_dict_map(_dict, map_function):
+    new_dict = copy.deepcopy(_dict)
+    for key, val in _dict.items():
+        if type(val) is dict:
+            new_dict[key] = _nested_dict_map(val, map_function)
+        else:
+            new_dict[key] = map_function(val)
+    return new_dict
