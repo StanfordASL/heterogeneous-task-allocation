@@ -19,10 +19,12 @@
 """
 import networkx as nx
 import random
+import time
 from task_allocation_milp import cplex_milp_centralized
 from task_allocation_homogeneous import cplex_lp_homogeneous_centralized
 from task_allocation_distributed import cplex_distributed_task_allocation_subroutine, distributed_task_allocation_sim
 from task_allocation_utilities import plot_trajectories, video_trajectories
+from task_allocation_approx import approx_centralized
 from datetime import datetime
 
 
@@ -76,10 +78,13 @@ def solve_intruders_problem(rows_num, cols_num, num_agent_types, agents_per_type
 
         opt_val, Xval, Yval, Zval, duals = problem.solve()
         agent_trajectories = problem.compute_trajectories()
+        print(opt_val)
     elif solver == "Homogeneous":
         # Only solve for the common tasks
         rewards_homogeneous = rewards[common_task_label]
+        #print(agents)
         agents_homogeneous = agents[list(agents.keys())[0]]
+        #print(agents_homogeneous)
         problem = cplex_lp_homogeneous_centralized(
             network=G,
             rewards=rewards_homogeneous,
@@ -136,8 +141,19 @@ def solve_intruders_problem(rows_num, cols_num, num_agent_types, agents_per_type
         agent_trajectories = {common_task_label: agent_trajectories}
 
     elif solver == "PTAS":
-        print("Good luck, Kiril!")
+        problem = approx_centralized(
+            network=G,
+            rewards=rewards,
+            agents=agents,
+            common_task_key=common_task_label,
+            verbose=False
+        )
+
+        opt_val, Xval, Yval, Zval = problem.solve()
+        print(opt_val)
+        #agent_trajectories = problem.compute_trajectories()
         return
+    
     elif solver == "PTAS_distributed":
         print("Good luck, Kiril!")
         return
@@ -233,42 +249,34 @@ if __name__ == "__main__":
 
     # We live in a lattice with this many rows and columns
     rows_num = 10
-    cols_num = 8
+    cols_num = 10
 
     # These are the agent types
     common_task_label = 'C'
-    num_agent_types = 4
+    num_agent_types = 2
     # And there are this many agents per type
-    agents_per_type = 4
+    agents_per_type = 10
     max_intruders_per_type = 3
 
     # And this is the time horizon
-    Thor = 15
+    Thor = 10
 
     # Random seed for problem generation
     seed = 1
 
-    # Solve the problem with a MILP
-    random.seed(seed)
-    solve_intruders_problem(rows_num, cols_num, num_agent_types,
-                            agents_per_type, max_intruders_per_type, Thor, common_task_label, solver="MILP")
+    timing = [ ]
+    solvers = ["MILP", "Homogeneous", "Homogeneous_distributed", "PTAS", "PTAS_distributed"]
+    solvers_partial = ["PTAS", "MILP"]
 
-    # # Solve a piece of the problem with the homogeneous solver
-    random.seed(seed)
-    solve_intruders_problem(rows_num, cols_num, num_agent_types,
-                            agents_per_type, max_intruders_per_type, Thor, common_task_label, solver="Homogeneous")
+    for sol in solvers_partial:
+        print(sol)
+        start = time.time()
+        random.seed(seed)
+        
+        solve_intruders_problem(rows_num, cols_num, num_agent_types,
+                                agents_per_type, max_intruders_per_type, Thor, common_task_label, solver=sol, _plot=False)
+        end = time.time()
+        timing.append(end - start)
+        print(timing[-1])
 
-    # Solve a piece of the problem with the _distributed_ homogeneous solver
-    random.seed(seed)
-    solve_intruders_problem(rows_num, cols_num, num_agent_types,
-                            agents_per_type, max_intruders_per_type, Thor, common_task_label, solver="Homogeneous_distributed")
-
-    # Solve the full problem with the polynomial-time approximation scheme
-    random.seed(seed)
-    solve_intruders_problem(rows_num, cols_num, num_agent_types,
-                            agents_per_type, max_intruders_per_type, Thor, common_task_label, solver="PTAS")
-
-    # Solve the full problem with the _distributed_ polynomial-time approximation scheme
-    random.seed(seed)
-    solve_intruders_problem(rows_num, cols_num, num_agent_types,
-                            agents_per_type, max_intruders_per_type, Thor, common_task_label, solver="PTAS_distributed")
+    #print(timing)
