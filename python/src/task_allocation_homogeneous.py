@@ -29,7 +29,7 @@ class abstract_lp_homogeneous_centralized(object):
     Implementation of Problem 2: homogeneous (single-fleet) task allocation
     '''
 
-    #def __init__(self, network, rewards, agents, verbose=False, linear_program=True):
+    # def __init__(self, network, rewards, agents, verbose=False, linear_program=True):
     def __init__(self, network, rewards, agents, verbose=False, linear_program=True):
         '''
         Initialize the optimization problem.
@@ -52,7 +52,7 @@ class abstract_lp_homogeneous_centralized(object):
         self.verbose = verbose
         self.linear_program = linear_program
         self.solved = False
-        
+
         self._verbprint("  Initializing")
         self.problem = self.initialize_problem()
 
@@ -75,6 +75,11 @@ class abstract_lp_homogeneous_centralized(object):
                 rewards[location].keys()), "ERROR: inconsistent time horizon"
 
         # Create variables
+        # Type of Boolean variables
+        if linear_program:
+            bool_vars_type = 'C'
+        else:
+            bool_vars_type = 'B'
         # X: transition variables
         self._verbprint("  Creating variables")
         X = {}
@@ -93,7 +98,7 @@ class abstract_lp_homogeneous_centralized(object):
                             names="X[{}][{}][{}][{}][{}]".format(
                                 agent_type, agent, start_location, end_location, time),
                             rewards=0,
-                            types='C',
+                            types=bool_vars_type,
                             lbs=0,
                             ubs=1,
                         )[0]
@@ -110,7 +115,7 @@ class abstract_lp_homogeneous_centralized(object):
                         names="Z[{}][{}][{}][{}]".format(
                             agent_type, agent, location, time),
                         rewards=rewards[location][time],
-                        types='C',
+                        types=bool_vars_type,
                         lbs=0,
                         ubs=1,
                     )[0]
@@ -235,7 +240,8 @@ class abstract_lp_homogeneous_centralized(object):
                         if self.Xval[agent_type][agent][start_location][end_location][time] != 0:
                             if abs(self.Xval[agent_type][agent][start_location][end_location][time] - 1) > 1e-3:
                                 print("WARNING: non-integer solution")
-                                print(self.Xval[agent_type][agent][start_location][end_location][time])
+                                print(self.Xval[agent_type][agent]
+                                      [start_location][end_location][time])
                                 import pdb
                                 pdb.set_trace()
                             trajectory.append(
