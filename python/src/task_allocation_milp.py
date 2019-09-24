@@ -98,8 +98,10 @@ class abstract_milp_centralized(object):
         # Type of Boolean variables
         if linear_program:
             bool_vars_type = 'C'
+            print("linear!")
         else:
             bool_vars_type = 'B'
+            print("integer!")
         # X: transition variables
         self._verbprint("  Creating variables")
         X = {}

@@ -74,10 +74,11 @@ def solve_intruders_problem(rows_num, cols_num, num_agent_types, agents_per_type
             agents=agents,
             common_task_key=common_task_label,
             verbose=False,
+            linear_program=True
         )
 
         opt_val, Xval, Yval, Zval, duals = problem.solve()
-        agent_trajectories = problem.compute_trajectories()
+        #agent_trajectories = problem.compute_trajectories()
         print(opt_val)
     elif solver == "Homogeneous":
         # Only solve for the common tasks
@@ -255,18 +256,18 @@ if __name__ == "__main__":
     common_task_label = 'C'
     num_agent_types = 2
     # And there are this many agents per type
-    agents_per_type = 10
+    agents_per_type = 5
     max_intruders_per_type = 3
 
     # And this is the time horizon
-    Thor = 10
+    Thor = 20
 
     # Random seed for problem generation
-    seed = 1
+    seed = 30
 
     timing = [ ]
     solvers = ["MILP", "Homogeneous", "Homogeneous_distributed", "PTAS", "PTAS_distributed"]
-    solvers_partial = ["PTAS", "MILP"]
+    solvers_partial = ["MILP"]
 
     for sol in solvers_partial:
         print(sol)
