@@ -81,6 +81,11 @@ class abstract_distributed_task_allocation_subroutine(object):
                 rewards[location].keys()), "ERROR: inconsistent time horizon"
 
         # Create variables
+        # Type of Boolean variables
+        if linear_program:
+            bool_vars_type = 'C'
+        else:
+            bool_vars_type = 'B'
         # X: transition variables
         self._verbprint("  Creating variables")
         X = {}
@@ -99,7 +104,7 @@ class abstract_distributed_task_allocation_subroutine(object):
                             names="X[{}][{}][{}][{}][{}]".format(
                                 agent_type, agent, start_location, end_location, time),
                             rewards=0,
-                            types='C',
+                            types=bool_vars_type,
                             lbs=0,
                             ubs=1,
                         )[0]
@@ -117,7 +122,7 @@ class abstract_distributed_task_allocation_subroutine(object):
                             agent_type, agent, location, time),
                         rewards=rewards[location][time] -
                         lagrangian[location][time],
-                        types='C',
+                        types=bool_vars_type,
                         lbs=0,
                         ubs=1,
                     )[0]
