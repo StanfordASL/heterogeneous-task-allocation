@@ -3,25 +3,23 @@
  United  States  Government  sponsorship  acknowledged.   Any commercial use
  must   be  negotiated  with  the  Office  of  Technology  Transfer  at  the
  California Institute of Technology.
-
  This software may be subject to  U.S. export control laws  and regulations.
  By accepting this document,  the user agrees to comply  with all applicable
  U.S. export laws and regulations.  User  has the responsibility  to  obtain
  export  licenses,  or  other  export  authority  as may be required  before
  exporting  such  information  to  foreign  countries or providing access to
  foreign persons.
-
  This  software  is a copy  and  may not be current.  The latest  version is
  maintained by and may be obtained from the Mobility  and  Robotics  Sytstem
  Section (347) at the Jet  Propulsion  Laboratory.   Suggestions and patches
  are welcome and should be sent to the software's maintainer.
-
 """
 try:
     import cplex
 except:
     raise ImportWarning(
         "WARNING: CPLEX not available. You will probably want to use another module")
+import time as timer
 
 
 class abstract_milp_centralized(object):
@@ -104,7 +102,23 @@ class abstract_milp_centralized(object):
             print("integer!")
         # X: transition variables
         self._verbprint("  Creating variables")
+        X_names = []
+        for agent_type in agents.keys():
+            for agent in agents[agent_type]:
+                for start_location in locations:
+                    for end_location in network.successors(start_location):
+                        for time in time_horizon:
+                            X_names.append("X[{}][{}][{}][{}][{}]".format(
+                                agent_type, agent, start_location, end_location, time))
+        X_indices = self.create_variables(
+            names=X_names,
+            rewards=[0]*len(X_names),
+            types=[bool_vars_type]*len(X_names),
+            lbs=[0]*len(X_names),
+            ubs=[1]*len(X_names),
+        )
         X = {}
+        x_ix = 0
         for agent_type in agents.keys():
             X[agent_type] = {}
             for agent in agents[agent_type]:
@@ -114,17 +128,28 @@ class abstract_milp_centralized(object):
                     for end_location in network.successors(start_location):
                         X[agent_type][agent][start_location][end_location] = {}
                         for time in time_horizon:
-                            X[agent_type][agent][start_location][end_location][time] = self.create_variables(
-                                names="X[{}][{}][{}][{}][{}]".format(
-                                    agent_type, agent, start_location, end_location, time),
-                                rewards=0,
-                                types=bool_vars_type,
-                                lbs=0,
-                                ubs=1,
-                            )[0]
+                            X[agent_type][agent][start_location][end_location][time] = X_indices[x_ix]
+                            x_ix += 1
 
         # Y: do I perform a shared task?
+        Y_names = []
+        Y_rewards = []
+        for agent_type in agents.keys():
+            for agent in agents[agent_type]:
+                for location in locations:
+                    for time in time_horizon:
+                        Y_names.append("Y[{}][{}][{}][{}]".format(
+                            agent_type, agent, location, time))
+                        Y_rewards.append(rewards[agent_type][location][time])
+        Y_indices = self.create_variables(
+            names=Y_names,
+            rewards=Y_rewards,
+            types=[bool_vars_type]*len(Y_names),
+            lbs=[0]*len(Y_names),
+            ubs=[1]*len(Y_names),
+        )
         Y = {}
+        y_ix = 0
         for agent_type in agents.keys():
             Y[agent_type] = {}
             for agent in agents[agent_type]:
@@ -132,17 +157,39 @@ class abstract_milp_centralized(object):
                 for location in locations:
                     Y[agent_type][agent][location] = {}
                     for time in time_horizon:
-                        Y[agent_type][agent][location][time] = self.create_variables(
-                            names="Y[{}][{}][{}][{}]".format(
-                                agent_type, agent, location, time),
-                            rewards=rewards[agent_type][location][time],
-                            types=bool_vars_type,
-                            lbs=0,
-                            ubs=1,
-                        )[0]
+                        Y[agent_type][agent][location][time] = Y_indices[y_ix]
+                        y_ix += 1
+                        # Y[agent_type][agent][location][time] = self.create_variables(
+                        #     names="Y[{}][{}][{}][{}]".format(
+                        #         agent_type, agent, location, time),
+                        #     rewards=rewards[agent_type][location][time],
+                        #     types=bool_vars_type,
+                        #     lbs=0,
+                        #     ubs=1,
+                        # )[0]
 
         # Z: do I perform a private task?
+        Z_names = []
+        Z_rewards = []
+        for agent_type in agents.keys():
+            for agent in agents[agent_type]:
+                for location in locations:
+                    for time in time_horizon:
+                        Z_names.append("Z[{}][{}][{}][{}]".format(
+                            agent_type, agent, location, time))
+                        Z_rewards.append(
+                            rewards[common_task_key][location][time])
+
+        Z_indices = self.create_variables(
+            names=Z_names,
+            rewards=Z_rewards,
+            types=[bool_vars_type]*len(Z_names),
+            lbs=[0]*len(Z_names),
+            ubs=[1]*len(Z_names),
+        )
+
         Z = {}
+        z_ix = 0
         for agent_type in agents.keys():
             Z[agent_type] = {}
             for agent in agents[agent_type]:
@@ -150,14 +197,16 @@ class abstract_milp_centralized(object):
                 for location in locations:
                     Z[agent_type][agent][location] = {}
                     for time in time_horizon:
-                        Z[agent_type][agent][location][time] = self.create_variables(
-                            names="Z[{}][{}][{}][{}]".format(
-                                agent_type, agent, location, time),
-                            rewards=rewards[common_task_key][location][time],
-                            types=bool_vars_type,
-                            lbs=0,
-                            ubs=1,
-                        )[0]
+                        Z[agent_type][agent][location][time] = Z_indices[z_ix]
+                        z_ix += 1
+                        # Z[agent_type][agent][location][time] = self.create_variables(
+                        #     names="Z[{}][{}][{}][{}]".format(
+                        #         agent_type, agent, location, time),
+                        #     rewards=rewards[common_task_key][location][time],
+                        #     types=bool_vars_type,
+                        #     lbs=0,
+                        #     ubs=1,
+                        # )[0]
 
         # Constraints
         self._verbprint("  Creating constraints")
@@ -385,10 +434,10 @@ class cplex_milp_centralized(abstract_milp_centralized):
         problem.objective.set_sense(problem.objective.sense.maximize)
         if self.linear_program is True:
             problem.set_problem_type(problem.problem_type.LP)
-            print("LP")
+            print(" linear!")
         else:
             problem.set_problem_type(problem.problem_type.MILP)
-            print("MILP")
+            print(" milp!")
         return problem
 
     def create_variables(self, names, rewards, types, lbs, ubs, quadratic_costs=None):
@@ -442,18 +491,20 @@ class cplex_milp_centralized(abstract_milp_centralized):
     def solve(self):
         self._verbprint("  Solving")
         if self.linear_program:
-            print("Here")
             self.problem.set_problem_type(self.problem.problem_type.LP)
             assert self.problem.get_problem_type(
             ) == self.problem.problem_type.LP, "ERROR: could not convert problem to LP"
-            self.problem.parameters.lpmethod.set(self.problem.parameters.lpmethod.values.primal)
-        self.problem.parameters.mip.tolerances.mipgap.set(0.05)
+        # else:
+        #    self.problem.parameters.mip.tolerances.mipgap.set(0.05)
 
         if self.verbose is False:
             self.problem.set_log_stream(None)
             self.problem.set_warning_stream(None)
             self.problem.set_results_stream(None)
+        start_time = timer.time()
         self.problem.solve()
+        end_time = timer.time()
+        print("Elapsed time inside solver: {}".format(end_time-start_time))
         self._verbprint('Solution status:                   %d' %
                         self.problem.solution.get_status())
         if self.problem.solution.is_primal_feasible():
@@ -477,6 +528,23 @@ class cplex_milp_centralized(abstract_milp_centralized):
         time_horizon = self.time_horizon
 
         # Process variables for human consumption
+        self._verbprint("    X")
+        X_names = []
+        # X_indices = []
+        for agent_type in agents.keys():
+            for agent in agents[agent_type]:
+                for start_location in locations:
+                    for end_location in network.successors(start_location):
+                        for time in time_horizon:
+                            X_name = "X[{}][{}][{}][{}][{}]".format(
+                                agent_type, agent, start_location, end_location, time)
+                            X_names.append(X_name)
+                            # X_indices.append((agent_type,agent,start_location,end_location,time))
+                            # WIll raise an error if name is not present
+                            # Xval[agent_type][agent][start_location][end_location][time] = self.problem.solution.get_values(
+                            #    # X_name)
+        Xvals = self.problem.solution.get_values(X_names)
+        ix = 0
         Xval = {}
         for agent_type in agents.keys():
             Xval[agent_type] = {}
@@ -487,12 +555,23 @@ class cplex_milp_centralized(abstract_milp_centralized):
                     for end_location in network.successors(start_location):
                         Xval[agent_type][agent][start_location][end_location] = {}
                         for time in time_horizon:
-                            X_name = "X[{}][{}][{}][{}][{}]".format(
-                                agent_type, agent, start_location, end_location, time)
-                            # WIll raise an error if name is not present
-                            Xval[agent_type][agent][start_location][end_location][time] = self.problem.solution.get_values(
-                                X_name)
+                            Xval[agent_type][agent][start_location][end_location][time] = Xvals[ix]
+                            ix += 1
+        self._verbprint("    Y")
+        Y_names = []
+        for agent_type in agents.keys():
+            for agent in agents[agent_type]:
+                for location in locations:
+                    for time in time_horizon:
+                        Y_name = "Y[{}][{}][{}][{}]".format(
+                            agent_type, agent, location, time)
+                        Y_names.append(Y_name)
+                        # Yval[agent_type][agent][location][time] = self.problem.solution.get_values(
+                        #    Y_name)
+
+        Yvals = self.problem.solution.get_values(Y_names)
         Yval = {}
+        ix = 0
         for agent_type in agents.keys():
             Yval[agent_type] = {}
             for agent in agents[agent_type]:
@@ -502,10 +581,23 @@ class cplex_milp_centralized(abstract_milp_centralized):
                     for time in time_horizon:
                         Y_name = "Y[{}][{}][{}][{}]".format(
                             agent_type, agent, location, time)
-                        Yval[agent_type][agent][location][time] = self.problem.solution.get_values(
-                            Y_name)
+                        Yval[agent_type][agent][location][time] = Yvals[ix]
+                        ix += 1
 
+        self._verbprint("    Z")
+        Z_names = []
+        for agent_type in agents.keys():
+            for agent in agents[agent_type]:
+                for location in locations:
+                    for time in time_horizon:
+                        Z_name = "Z[{}][{}][{}][{}]".format(
+                            agent_type, agent, location, time)
+                        Z_names.append(Z_name)
+                        # Zval[agent_type][agent][location][time]=self.problem.solution.get_values(
+                        #     Z_name)
+        Zvals = self.problem.solution.get_values(Z_names)
         Zval = {}
+        ix = 0
         for agent_type in agents.keys():
             Zval[agent_type] = {}
             for agent in agents[agent_type]:
@@ -515,8 +607,8 @@ class cplex_milp_centralized(abstract_milp_centralized):
                     for time in time_horizon:
                         Z_name = "Z[{}][{}][{}][{}]".format(
                             agent_type, agent, location, time)
-                        Zval[agent_type][agent][location][time] = self.problem.solution.get_values(
-                            Z_name)
+                        Zval[agent_type][agent][location][time] = Zvals[ix]
+                        ix += 1
 
         initial_location_duals = None
         flow_continuity_duals = None
