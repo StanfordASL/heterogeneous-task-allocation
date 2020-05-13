@@ -27,6 +27,45 @@ from task_allocation_utilities import plot_trajectories, video_trajectories
 from task_allocation_approx import approx_centralized
 from datetime import datetime
 
+def generate_problem(rows_num, cols_num, num_agent_types, agents_per_type, max_intruders_per_type, Thor, common_task_label):
+    times = range(Thor)
+
+    # Create a NetworkX network
+    print("Preparing the problem")
+    print("  Graph...")
+    G = create_lattice_graph(rows_num, cols_num)
+
+    # Add rewards to it
+    print("  Rewards...")
+    agent_types = list(range(num_agent_types))
+    task_types = list(common_task_label)+agent_types
+
+    rewards = create_intruder_reward(G, task_types, times, max_intruders_per_type)
+
+    initial_locations = {}
+    for f in agent_types:
+        initial_locations[f] = []
+        for a in range(agents_per_type):
+            
+
+    # Create agents
+    print("  Agents.")
+    agent_colors = {}
+
+    agents = {}
+    for agent_type in agent_types:
+        agent_color = '#%02X%02X%02X' % (r(), r(), r())
+        agent_colors[agent_type] = agent_color
+        agents[agent_type] = []
+        for agent_id in range(agents_per_type):
+            agent_name = f'{agent_type}:{agent_id}'
+            agent_initial_location = (
+                random.randint(0, rows_num-1),
+                random.randint(0, cols_num-1)
+            )
+            agents[agent_type].append(
+                (agent_name, agent_initial_location, agent_color)
+            )
 
 def solve_intruders_problem(rows_num, cols_num, num_agent_types, agents_per_type, max_intruders_per_type, Thor, common_task_label, solver="MILP", _plot=True):
 
@@ -260,10 +299,10 @@ if __name__ == "__main__":
     max_intruders_per_type = 3
 
     # And this is the time horizon
-    Thor = 20
+    Thor = 50
 
     # Random seed for problem generation
-    seed = 30
+    seed = 1
 
     timing = [ ]
     solvers = ["MILP", "Homogeneous", "Homogeneous_distributed", "PTAS", "PTAS_distributed"]

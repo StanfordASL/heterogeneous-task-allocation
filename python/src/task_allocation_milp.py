@@ -385,8 +385,10 @@ class cplex_milp_centralized(abstract_milp_centralized):
         problem.objective.set_sense(problem.objective.sense.maximize)
         if self.linear_program is True:
             problem.set_problem_type(problem.problem_type.LP)
+            print("LP")
         else:
             problem.set_problem_type(problem.problem_type.MILP)
+            print("MILP")
         return problem
 
     def create_variables(self, names, rewards, types, lbs, ubs, quadratic_costs=None):
@@ -440,9 +442,11 @@ class cplex_milp_centralized(abstract_milp_centralized):
     def solve(self):
         self._verbprint("  Solving")
         if self.linear_program:
+            print("Here")
             self.problem.set_problem_type(self.problem.problem_type.LP)
             assert self.problem.get_problem_type(
-            ) == self.problem.problem_type.LP, "ERROR: could not convert problem to QP"
+            ) == self.problem.problem_type.LP, "ERROR: could not convert problem to LP"
+            self.problem.parameters.lpmethod.set(self.problem.parameters.lpmethod.values.primal)
         self.problem.parameters.mip.tolerances.mipgap.set(0.05)
 
         if self.verbose is False:

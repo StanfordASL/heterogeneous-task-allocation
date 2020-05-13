@@ -246,3 +246,5 @@ TSWLatexianTemp*
 # MacOS garbage
 .DS_Store
 
+# emacs temp files
+*~
