@@ -1,4 +1,7 @@
 #include <iostream>
+#include <iostream>
+#include <cstdio>
+#include <ctime>
 //#include <lemon/list_graph.h>
 #include <lemon/smart_graph.h>
 #include <lemon/network_simplex.h>
@@ -28,8 +31,8 @@ using Capacity = int;
 
 using NS = NetworkSimplex<Graph, Capacity, Weight>;
 
-// generates flow graph for private task of a specific fleet
-void createPrivateGraph(const Graph& workspace, vector<vector<double>>& rewards, vector<int>& init, vector<vector<int>>& x, vector<vector<int>>& y)
+// returns solution for private task of a specific fleet
+void solvePrivate(const Graph& workspace, const vector<vector<double>>& rewards, const vector<int>& init, vector<vector<int>>& x,  vector<vector<int>>& y)
 {
 	int agents = init.size();
 	
@@ -59,7 +62,7 @@ void createPrivateGraph(const Graph& workspace, vector<vector<double>>& rewards,
 	
 	// consolidate init vector
 	vector<int> init_consol(workspaceNodeNum,0);
-	for (vector<int>::iterator it = init.begin(); it !=  init.end(); it++)
+	for (vector<int>::const_iterator it = init.begin(); it !=  init.end(); it++)
 		init_consol[*it]++;
 
 	// generate E_s edges
@@ -91,14 +94,13 @@ void createPrivateGraph(const Graph& workspace, vector<vector<double>>& rewards,
 			correspondence[a] = NULL;
 		}
 
-	cout << "Thor " << Thor << endl;
-	
+	//cout << "Thor " << Thor << endl;
 	
 	// generate E_R edges
 	for (int t = 0; t < Thor; t++)
 		for (int v = 0; v < workspaceNodeNum; v++)
 		{
-			cout << "node v = " << v << ", t = " << t << endl;
+			// cout << "node v = " << v << ", t = " << t << endl;
 			
 			if (rewards[t][v] != 0)
 			{
@@ -142,11 +144,13 @@ void createPrivateGraph(const Graph& workspace, vector<vector<double>>& rewards,
 		break;
 	case NS::OPTIMAL:
 		ns.flowMap(flows);
-		
+
+		//cerr << "flow correct" << endl;
+		/*
 		for (ArcIt a(g); a != INVALID; ++a)
 			cout << "flow on " << g.id(a) << " = " << flows[a] << endl;
 		
-		cerr << "cost=" << ns.totalCost() << endl; 
+			cerr << "cost=" << ns.totalCost() << endl; */
 		break;
 	case NS::UNBOUNDED:
 		cerr << "infinite flow" << endl;
@@ -159,6 +163,213 @@ void createPrivateGraph(const Graph& workspace, vector<vector<double>>& rewards,
 	for (ArcIt a(g); a != INVALID; ++a)
 		if (correspondence[a] != NULL)
 			*correspondence[a]=flows[a];
+}
+
+// returns solution for shared task of all agents
+// rewards are for shared task only
+void solveShared(const Graph& workspace, const vector<vector<double>>& rewards, const vector<vector<int>>& init,  vector<vector<vector<int>>>& x, vector<vector<vector<int>>>& z)
+{
+	// convert shared problem into a private problem
+	int Thor = rewards.size();
+	int nodesNum = workspace.maxNodeId()+1;
+	int arcsNum = workspace.maxArcId()+1;
+	int fleetsNum = init.size();
+	
+
+	// generate initial positions input
+	vector<int> init_flat;
+	for (int f = 0; f < fleetsNum; f++)
+		for (unsigned int i = 0; i < init[f].size(); i++)
+			init_flat.push_back(init[f][i]);
+
+	
+	// generate flat x for output
+	vector<vector<int>> x_flat(Thor-1, vector<int>(arcsNum + 1, 0));
+
+	vector<vector<int>> y_flat(Thor, vector<int>(nodesNum, 0));
+
+	solvePrivate(workspace, rewards, init_flat, x_flat, y_flat);
+	
+	/*cout << "x_flat values (time, origin, destination, value)" << endl;
+	for (int t=0; t < Thor-1; t++)
+		for (int ai = 0; ai < arcsNum; ai++)
+			if (x_flat[t][ai] != 0)
+			{
+				Arc a = workspace.arcFromId(ai);
+				int o = workspace.id(workspace.source(a));
+				int d = workspace.id(workspace.target(a));
+				cout << t << " " << o << " " << d << " " << x_flat[t][ai] << endl;
+			}
+
+	cout << "y_flat values (time, vertex, value)" << endl;
+	for (int t = 0; t < Thor; t++)
+		for (int v = 0; v < nodesNum; v++)
+			if (y_flat[t][v]!=0)
+				cout << t << " " << v << " " << y_flat[t][v] << endl;
+	*/
+
+
+	for (int f = 0; f < fleetsNum; f++)
+	{
+		int agents = init[f].size();
+		for (int a = 0; a < agents; a++)
+		{
+			int curVertex = init[f][a];
+
+			for (int t = 0; t < Thor; t++)
+			{
+				if (y_flat[t][curVertex] != 0)
+				{
+					z[f][t][curVertex]++;
+					y_flat[t][curVertex]--;
+				}
+
+				if (t == Thor - 1)
+					break;
+
+				// find the corresponding edge
+				for (int arcId = 0; arcId < workspace.maxArcId() + 1; arcId++)
+				{
+					if (x_flat[t][arcId] == 0)
+						continue;
+
+					Arc a = workspace.arcFromId(arcId);
+					int o = workspace.id(workspace.source(a));
+					int d = workspace.id(workspace.target(a));
+
+					if (o != curVertex)
+						continue;
+
+					x_flat[t][arcId]--;
+					x[f][t][arcId]++;
+					curVertex = d;
+					
+					break;
+				}
+			}
+		}
+	}
+}
+
+double totalReward(const vector<vector<vector<double>>>& rewards, const vector<vector<vector<int>>>& y, const vector<vector<vector<int>>>& z)
+{
+	double R = 0;
+
+	int fleetsNum = rewards.size() - 1;
+	int Thor = rewards[0].size();
+	int nodesNum = rewards[0][0].size();
+
+	for (int f = 0; f < fleetsNum; f++)
+		for (int t = 0; t < Thor; t++)
+			for (int v = 0; v < nodesNum; v++)
+			{
+				if (y[f][t][v] == 1)
+					R += rewards[fleetsNum][t][v];
+				if (z[f][t][v] == 1)
+					R += rewards[f][t][v];
+			}
+
+	return R;
+}
+
+double solveSharedFirst(const Graph& workspace, const vector<vector<vector<double>>>& rewards, const vector<vector<int>>& init,  vector<vector<vector<int>>>& x, vector<vector<vector<int>>>& y, vector<vector<vector<int>>>& z)
+{
+	int Thor = rewards[0].size();
+	int nodesNum = workspace.maxNodeId()+1;
+	int arcsNum = workspace.maxArcId()+1;
+	int fleetsNum = init.size();
+	
+	vector<vector<vector<int>>> x_bar(fleetsNum, vector<vector<int>>(Thor-1, vector<int>(arcsNum, 0)));
+	vector<vector<vector<int>>> y_bar(fleetsNum, vector<vector<int>>(Thor, vector<int>(nodesNum, 0))); 
+	
+	solveShared(workspace, rewards[fleetsNum], init, x_bar, y_bar);
+
+	vector<vector<vector<double>>> rewards_bar(fleetsNum, vector<vector<double>>(Thor, vector<double>(nodesNum, 0)));
+
+	for (int f = 0; f < fleetsNum; f++)
+		for (int t = 0; t < Thor; t++)
+			for (int v = 0; v < nodesNum; v++)
+			{
+				rewards_bar[f][t][v] = rewards[f][t][v];
+				
+				if (y_bar[f][t][v] != 0)
+					rewards_bar[f][t][v] += rewards[fleetsNum][t][v];
+			}
+
+	for (int f = 0; f < fleetsNum; f++)
+	{
+		solvePrivate(workspace, rewards_bar[f], init[f], x[f], z[f]);
+		y[f] = z[f];
+	}
+
+	return totalReward(rewards, y, z);
+}
+
+double solvePrivateFirst(const Graph& workspace, const vector<vector<vector<double>>>& rewards, const vector<vector<int>>& init,  vector<vector<vector<int>>>& x, vector<vector<vector<int>>>& y, vector<vector<vector<int>>>& z)
+{
+	int Thor = rewards[0].size();
+	int nodesNum = workspace.maxNodeId()+1;
+	int fleetsNum = init.size();
+	
+	vector<vector<vector<double>>> rewards_hat(fleetsNum, vector<vector<double>>(Thor, vector<double>(nodesNum, 0)));
+
+	for (int f = 0; f < fleetsNum; f++)
+		for (int t = 0; t < Thor; t++)
+			for (int v = 0; v < nodesNum; v++)
+				rewards_hat[f][t][v] = rewards[f][t][v] + rewards[fleetsNum][t][v] / (double)fleetsNum;
+			
+	for (int f = 0; f < fleetsNum; f++)
+		solvePrivate(workspace, rewards_hat[f], init[f], x[f], z[f]);
+
+	for (int t = 0; t < Thor; t++)
+		for (int v = 0; v < nodesNum; v++)
+			for (int f = 0; f < fleetsNum; f++)
+				if (z[f][t][v] == 1)
+				{
+					y[f][t][v] = 1;
+					break;
+				}
+
+	return totalReward(rewards, y, z);
+}
+
+double solvePFSF(const Graph& workspace, const vector<vector<vector<double>>>& rewards, const vector<vector<int>>& init,  vector<vector<vector<int>>>& x, vector<vector<vector<int>>>& y, vector<vector<vector<int>>>& z)
+{
+	int Thor = rewards[0].size();
+	int nodesNum = workspace.maxNodeId()+1;
+	int arcsNum = workspace.maxArcId()+1;
+	int fleetsNum = init.size();
+	
+	vector<vector<vector<int>>> x1(fleetsNum, vector<vector<int>>(Thor-1, vector<int>(arcsNum, 0)));
+	vector<vector<vector<int>>> x2 = x1;
+	
+	vector<vector<vector<int>>> y1(fleetsNum, vector<vector<int>>(Thor, vector<int>(nodesNum, 0)));
+	vector<vector<vector<int>>> y2 = y1;
+
+	vector<vector<vector<int>>> z1 = y1;
+	vector<vector<vector<int>>> z2 = y1;
+
+	double r1 = solvePrivateFirst(workspace, rewards, init, x1, y1, z1);
+	double r2 = solveSharedFirst(workspace, rewards, init, x2, y2, z2);
+
+	cout << "privateFirst reward = " << r1 << endl;
+	cout << "sharedFirst reward = " << r2 << endl;
+	
+
+	if (r1 < r2)
+	{
+		x = x1;
+		y = y1;
+		z = z1;
+		
+		return r1;
+	}
+
+	x = x2;
+	y = y2;
+	z = z2;
+
+	return r2;
 }
 
 
@@ -224,7 +435,6 @@ int importer(const string& path, Graph& workspace_graph, vector<vector<vector<do
 	cout << "- init with ";
 	for (int f = 0; f < types -1; f++)
 		cout << init[f].size() << " ";
-
 	cout << "agents" << endl;
 
 	return times;
@@ -233,35 +443,110 @@ int importer(const string& path, Graph& workspace_graph, vector<vector<vector<do
 int main()
 {
 	string path = "./../data";
-	Graph w_g;
+	Graph workspace;
 	vector<vector<vector<double>>> rewards;
 	vector<vector<int>> init;
 
-	int timeHor = importer(path, w_g, rewards, init);
+	int timeHor = importer(path, workspace, rewards, init);
+
+	int fleetsNum = init.size();
+
+	vector<vector<vector<int>>> x(fleetsNum, vector<vector<int>>(timeHor-1, vector<int>(workspace.maxArcId() + 1, 0)));
+	vector<vector<vector<int>>> y(fleetsNum, vector<vector<int>>(timeHor, vector<int>(workspace.maxNodeId() + 1, 0)));
+	vector<vector<vector<int>>> z = y;
+
+	clock_t start = clock();
+
+	double R = solvePFSF(workspace, rewards, init, x, y ,z);
+
+	double duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+
+    cout << "running time in seconds: " << duration << endl;
+	cout << "solution to PFSF with reward " << R << endl;
+
+	/*
+	cout << "x values (fleet, time, origin, destination, value)" << endl;
+	for (unsigned int f = 0; f < rewards.size()-1; f++)
+		for (auto t=0; t < timeHor-1; t++)
+			for (auto ai = 0; ai < workspace.maxArcId()+1; ai++)
+				if (x[f][t][ai] != 0)
+				{
+					Arc a = workspace.arcFromId(ai);
+					int o = workspace.id(workspace.source(a));
+					int d = workspace.id(workspace.target(a));
+					cout << f << " " << t << " " << o << " " << d << " " << x[f][t][ai] << endl;
+				}
+
+	cout << "y values (fleet, time, vertex, value)" << endl;
+	for (unsigned int f = 0; f < rewards.size()-1; f++)
+		for (int t = 0; t < timeHor; t++)
+			for (int v = 0; v < workspace.maxNodeId()+1; v++)
+				if (y[f][t][v]!=0)
+					cout << f << " " << t << " " << v << " " << y[f][t][v] << endl;
 	
-	vector<vector<int>> x(timeHor-1, vector<int>(w_g.maxArcId()+1, 0)); // movement vector (time / edge)
-	vector<vector<int>> y(timeHor, vector<int>(w_g.maxNodeId()+1, 0)); // asignemnt vector (time / vertex)
+	cout << "z values (fleet, time, vertex, value)" << endl;
+	for (unsigned int f = 0; f < rewards.size()-1; f++)
+		for (int t = 0; t < timeHor; t++)
+			for (int v = 0; v < workspace.maxNodeId()+1; v++)
+				if (z[f][t][v]!=0)
+					cout << f << " " << t << " " << v << " " << z[f][t][v] << endl;
+	
+	return 0; 
+	*/
+
+	/*
+	vector<vector<int>> x(timeHor-1, vector<int>(workspace.maxArcId()+1, 0)); // movement vector (time / edge)
+	vector<vector<int>> y(timeHor, vector<int>(workspace.maxNodeId()+1, 0)); // asignemnt vector (time / vertex)
 						  
-	createPrivateGraph(w_g, rewards[0], init[0], x, y);
+	solvePrivate(workspace, rewards[0], init[0], x, y);
 
 	cout << "x values (time, origin, destination, value)" << endl;
 	for (int t=0; t < timeHor-1; t++)
-		for (int ai = 0; ai < w_g.maxArcId()+1; ai++)
+		for (int ai = 0; ai < workspace.maxArcId()+1; ai++)
 			if (x[t][ai] != 0)
 			{
-				Arc a = w_g.arcFromId(ai);
-				int o = w_g.id(w_g.source(a));
-				int d = w_g.id(w_g.target(a));
+				Arc a = workspace.arcFromId(ai);
+				int o = workspace.id(workspace.source(a));
+				int d = workspace.id(workspace.target(a));
 				cout << t << " " << o << " " << d << " " << x[t][ai] << endl;
 			}
 
 	cout << "y values (time, vertex, value)" << endl;
 	for (int t = 0; t < timeHor; t++)
-		for (int v = 0; v < w_g.maxNodeId()+1; v++)
+		for (int v = 0; v < workspace.maxNodeId()+1; v++)
 			if (y[t][v]!=0)
 				cout << t << " " << v << " " << y[t][v] << endl;
-			
-	return 0;
+
+	*/
+
+
+	/*vector<vector<vector<int>>> x_shared(fleetsNum, vector<vector<int>>(timeHor-1, vector<int>(workspace.maxArcId() + 1, 0))); // movement vector (time / edge
+	vector<vector<vector<int>>> z_shared(fleetsNum, vector<vector<int>>(timeHor, vector<int>(workspace.maxNodeId() + 1, 0))); // asignemnt vector (time / vertex)
+	
+	solveShared(workspace, rewards[fleetsNum], init, x_shared, z_shared);
+
+	cout << "shared" << endl;
+
+	cout << "x values (fleet, time, origin, destination, value)" << endl;
+	for (unsigned int f = 0; f < rewards.size()-1; f++)
+		for (auto t=0; t < timeHor-1; t++)
+			for (auto ai = 0; ai < workspace.maxArcId()+1; ai++)
+				if (x_shared[f][t][ai] != 0)
+				{
+					Arc a = workspace.arcFromId(ai);
+					int o = workspace.id(workspace.source(a));
+					int d = workspace.id(workspace.target(a));
+					cout << f << " " << t << " " << o << " " << d << " " << x_shared[f][t][ai] << endl;
+				}
+
+	cout << "z values (fleet, time, vertex, value)" << endl;
+	for (unsigned int f = 0; f < rewards.size()-1; f++)
+		for (int t = 0; t < timeHor; t++)
+			for (int v = 0; v < workspace.maxNodeId()+1; v++)
+				if (z_shared[f][t][v]!=0)
+					cout << f << " " << t << " " << v << " " << z_shared[f][t][v] << endl;
+	
+					return 0; */
 }
 
 int main_example()
@@ -350,10 +635,10 @@ int main_example()
 	case NS::OPTIMAL:
 		ns.flowMap(flows);
 		
-		for (ArcIt a(g); a != INVALID; ++a)
+		/*for (ArcIt a(g); a != INVALID; ++a)
 			cout << "flow on " << g.id(a) << " = " << flows[a] << endl;
 		
-		cerr << "cost=" << ns.totalCost() << endl; 
+			cerr << "cost=" << ns.totalCost() << endl; */
 		break;
 	case NS::UNBOUNDED:
 		cerr << "infinite flow" << endl;

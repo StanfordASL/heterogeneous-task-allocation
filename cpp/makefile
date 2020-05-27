@@ -1,5 +1,5 @@
 CXX = g++
-CXX_FLAGS = -Wfatal-errors -Wall #-Wextra -Wpedantic -Wconversion -Wshadow
+CXX_FLAGS = -Wfatal-errors -Wall # -Wextra # -Wpedantic -Wconversion -Wshadow
 #CXX_FLAGS = -Wfatal-errors -Wall -Wextra -Wpedantic -Wconversion -Wshadow
 # -g flag for debug
 
