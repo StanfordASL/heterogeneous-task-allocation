@@ -71,7 +71,7 @@ def solve_intruders_problem(rows_num, cols_num, num_agent_types, agents_per_type
             agents=agents,
             common_task_key=common_task_label,
             verbose=False,
-            linear_program=True
+            #linear_program=True
         )
 
         opt_val, Xval, Yval, Zval, duals = problem.solve()
@@ -246,18 +246,18 @@ if __name__ == "__main__":
     # Problem parameters
 
     # We live in a lattice with this many rows and columns
-    rows_num = 20
-    cols_num = 20
+    rows_num = 10
+    cols_num = 10
 
     # These are the agent types
     common_task_label = 'C'
-    num_agent_types = 2
+    num_agent_types = 10
     # And there are this many agents per type
-    agents_per_type = 5
+    agents_per_type = 2
     max_intruders_per_type = 3
 
     # And this is the time horizon
-    Thor = 20
+    Thor = 10
 
     # Random seed for problem generation
     seed = 30

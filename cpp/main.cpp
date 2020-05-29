@@ -5,6 +5,7 @@
 //#include <lemon/list_graph.h>
 #include <lemon/smart_graph.h>
 #include <lemon/network_simplex.h>
+#include <lemon/cost_scaling.h>
 #include <lemon/dijkstra.h>
 #include "csv.h"
 
@@ -26,7 +27,8 @@ using NodeMap = Graph::NodeMap<Type>;
 template<typename Type>
 using ArcMap = Graph::ArcMap<Type>;
 
-using Weight = double;
+//using Weight = double;
+using Weight = int;
 using Capacity = int;
 
 using NS = NetworkSimplex<Graph, Capacity, Weight>;
@@ -34,11 +36,14 @@ using NS = NetworkSimplex<Graph, Capacity, Weight>;
 // returns solution for private task of a specific fleet
 void solvePrivate(const Graph& workspace, const vector<vector<double>>& rewards, const vector<int>& init, vector<vector<int>>& x,  vector<vector<int>>& y)
 {
+	//cout << "computing homogeneous Private" << endl;
+	
 	int agents = init.size();
 	
 	Graph g; // flow graph
 	ArcMap<int> capacity(g, agents); // capacity of edges
-	ArcMap<double> cost(g, 0); // cost of edges
+	//ArcMap<double> cost(g, 0); // cost of edges
+	ArcMap<int> cost(g, 0); // cost of edges
 	ArcMap<int*> correspondence(g, NULL); // correspondence between edges and value s of x,y
 	
 	int workspaceNodeNum = workspace.maxNodeId()+1;
@@ -106,7 +111,8 @@ void solvePrivate(const Graph& workspace, const vector<vector<double>>& rewards,
 			{
 				Arc a = g.addArc(vNodes[t][v],wNodes[t][v]);
 				capacity[a] = 1;
-				cost[a] = rewards[t][v];
+				//cost[a] = rewards[t][v];
+				cost[a] = (int)rewards[t][v];
 				correspondence[a] = &y[t][v];
 			}
 		}
@@ -137,7 +143,8 @@ void solvePrivate(const Graph& workspace, const vector<vector<double>>& rewards,
 
 	// solution will be updated in the following vector
 	ArcMap<Capacity> flows(g);
-	NS::ProblemType status = ns.run();
+	
+	NS::ProblemType status = ns.run(NS::PivotRule::ALTERING_LIST);
 	switch (status) {
 	case NS::INFEASIBLE:
 		cerr << "insufficient flow" << endl;
@@ -169,6 +176,7 @@ void solvePrivate(const Graph& workspace, const vector<vector<double>>& rewards,
 // rewards are for shared task only
 void solveShared(const Graph& workspace, const vector<vector<double>>& rewards, const vector<vector<int>>& init,  vector<vector<vector<int>>>& x, vector<vector<vector<int>>>& z)
 {
+	//cout << "computing homogeneous Shared" << endl;
 	// convert shared problem into a private problem
 	int Thor = rewards.size();
 	int nodesNum = workspace.maxNodeId()+1;
@@ -263,9 +271,9 @@ double totalReward(const vector<vector<vector<double>>>& rewards, const vector<v
 		for (int t = 0; t < Thor; t++)
 			for (int v = 0; v < nodesNum; v++)
 			{
-				if (y[f][t][v] == 1)
+				if (y[f][t][v] > 0)
 					R += rewards[fleetsNum][t][v];
-				if (z[f][t][v] == 1)
+				if (z[f][t][v] > 0)
 					R += rewards[f][t][v];
 			}
 
@@ -274,6 +282,7 @@ double totalReward(const vector<vector<vector<double>>>& rewards, const vector<v
 
 double solveSharedFirst(const Graph& workspace, const vector<vector<vector<double>>>& rewards, const vector<vector<int>>& init,  vector<vector<vector<int>>>& x, vector<vector<vector<int>>>& y, vector<vector<vector<int>>>& z)
 {
+	//cout << "computing SharedFirst" << endl;
 	int Thor = rewards[0].size();
 	int nodesNum = workspace.maxNodeId()+1;
 	int arcsNum = workspace.maxArcId()+1;
@@ -307,6 +316,7 @@ double solveSharedFirst(const Graph& workspace, const vector<vector<vector<doubl
 
 double solvePrivateFirst(const Graph& workspace, const vector<vector<vector<double>>>& rewards, const vector<vector<int>>& init,  vector<vector<vector<int>>>& x, vector<vector<vector<int>>>& y, vector<vector<vector<int>>>& z)
 {
+	//cout << "computing PrivateFirst" << endl;
 	int Thor = rewards[0].size();
 	int nodesNum = workspace.maxNodeId()+1;
 	int fleetsNum = init.size();
@@ -335,6 +345,8 @@ double solvePrivateFirst(const Graph& workspace, const vector<vector<vector<doub
 
 double solvePFSF(const Graph& workspace, const vector<vector<vector<double>>>& rewards, const vector<vector<int>>& init,  vector<vector<vector<int>>>& x, vector<vector<vector<int>>>& y, vector<vector<vector<int>>>& z)
 {
+	//cout << "computing PFSF" << endl;
+	
 	int Thor = rewards[0].size();
 	int nodesNum = workspace.maxNodeId()+1;
 	int arcsNum = workspace.maxArcId()+1;
@@ -417,7 +429,7 @@ int importer(const string& path, Graph& workspace_graph, vector<vector<vector<do
 			{
 				int dummy;
 				rewardsFile.read_row(dummy, dummy, dummy, value);
-				rewards[type][t][v] = value;
+				rewards[type][t][v] = -value;
 			}
 		}
 	}
@@ -549,6 +561,7 @@ int main()
 					return 0; */
 }
 
+/*
 int main_example()
 {
 	Graph g;
@@ -635,10 +648,7 @@ int main_example()
 	case NS::OPTIMAL:
 		ns.flowMap(flows);
 		
-		/*for (ArcIt a(g); a != INVALID; ++a)
-			cout << "flow on " << g.id(a) << " = " << flows[a] << endl;
-		
-			cerr << "cost=" << ns.totalCost() << endl; */
+	
 		break;
 	case NS::UNBOUNDED:
 		cerr << "infinite flow" << endl;
@@ -648,7 +658,7 @@ int main_example()
 	}
 
 	return 0;
-}
+	}*/
 
 /*
   Example using static graph structure

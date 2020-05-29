@@ -22,13 +22,22 @@ def create_intruder_reward(G, fleets_num, times, max_intruders_per_type):
         intruders_number = max_intruders_per_type
         for intruder in range(intruders_number):
             starting_position = random.choice(list(G.nodes()))
-            rewards[task][0][starting_position] -= 1.
+            rewards[task][0][starting_position] += 1.
         for time in times[1:]:
             for location in G.nodes():
                 for neighbor in G.predecessors(location):
                     num_successors = float(len(list(G.successors(neighbor))))
                     rewards[task][time][location] += rewards[task][time-1][neighbor]/num_successors
     return rewards
+
+def round_rewards(rewards):
+    rounded = rewards
+    for task in list(rewards.keys()):
+        for time in list(rewards[0].keys()):
+            for location in list(rewards[0][0].keys()):
+                rounded[task][time][location] = int(rewards[task][time][location]*100)
+
+    return rounded
 
 
 def generate_problem(dimension, fleets_num, agents_per_fleet, max_intruders_per_type, Thor):
@@ -79,8 +88,10 @@ if __name__ == "__main__":
 
     G, rewards, init = generate_problem(dimension, fleets_num, agents_per_fleet, max_intruders_per_fleet, Thor)
 
+    rewards = round_rewards(rewards)
+
     # write graph
-    with open('edges.csv', 'w', newline='') as csvfile:
+    with open(path+'edges.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',',
                                 quotechar='|', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(['origin','destination'])
@@ -92,7 +103,7 @@ if __name__ == "__main__":
             writer.writerow([o,d])
 
     # write rewards
-    with open('rewards.csv', 'w', newline='') as csvfile:
+    with open(path+'rewards.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(['task_type','time','vertex','value'])
         writer.writerow([fleets_num+1,Thor,dimension**2,0])
@@ -104,7 +115,7 @@ if __name__ == "__main__":
                     writer.writerow([task,time,v,value])
     
     # write start poisitions
-    with open('init.csv', 'w', newline='') as csvfile:
+    with open(path+'init.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(['fleet','vertex'])
         for fleet in range(fleets_num):
