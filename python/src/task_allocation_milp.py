@@ -20,6 +20,7 @@ except:
     raise ImportWarning(
         "WARNING: CPLEX not available. You will probably want to use another module")
 import time as timer
+from copy import deepcopy
 
 
 class abstract_milp_centralized(object):
@@ -98,115 +99,115 @@ class abstract_milp_centralized(object):
             bool_vars_type = 'C'
             print("linear!")
         else:
-            bool_vars_type = 'B'
+            bool_vars_type = 'I'
             print("integer!")
         # X: transition variables
         self._verbprint("  Creating variables")
         X_names = []
+        X_ubs = []
         for agent_type in agents.keys():
-            for agent in agents[agent_type]:
-                for start_location in locations:
-                    for end_location in network.successors(start_location):
-                        for time in time_horizon:
-                            X_names.append("X[{}][{}][{}][{}][{}]".format(
-                                agent_type, agent, start_location, end_location, time))
+            num_agents_in_type = len(agents[agent_type])
+            for start_location in locations:
+                for end_location in network.successors(start_location):
+                    for time in time_horizon:
+                        X_names.append("X[{}][{}][{}][{}]".format(
+                            agent_type, start_location, end_location, time))
+                        X_ubs.append(num_agents_in_type)
         X_indices = self.create_variables(
             names=X_names,
             rewards=[0]*len(X_names),
             types=[bool_vars_type]*len(X_names),
             lbs=[0]*len(X_names),
-            ubs=[1]*len(X_names),
+            ubs=X_ubs,
         )
         X = {}
         x_ix = 0
         for agent_type in agents.keys():
             X[agent_type] = {}
-            for agent in agents[agent_type]:
-                X[agent_type][agent] = {}
-                for start_location in locations:
-                    X[agent_type][agent][start_location] = {}
-                    for end_location in network.successors(start_location):
-                        X[agent_type][agent][start_location][end_location] = {}
-                        for time in time_horizon:
-                            X[agent_type][agent][start_location][end_location][time] = X_indices[x_ix]
-                            x_ix += 1
+            for start_location in locations:
+                X[agent_type][start_location] = {}
+                for end_location in network.successors(start_location):
+                    X[agent_type][start_location][end_location] = {}
+                    for time in time_horizon:
+                        X[agent_type][start_location][end_location][time] = X_indices[x_ix]
+                        x_ix += 1
 
         # Y: do I perform a shared task?
         Y_names = []
         Y_rewards = []
+        Y_ubs = []
         for agent_type in agents.keys():
-            for agent in agents[agent_type]:
-                for location in locations:
-                    for time in time_horizon:
-                        Y_names.append("Y[{}][{}][{}][{}]".format(
-                            agent_type, agent, location, time))
-                        Y_rewards.append(rewards[agent_type][location][time])
+            num_agents_in_type = len(agents[agent_type])
+            for location in locations:
+                for time in time_horizon:
+                    Y_names.append("Y[{}][{}][{}]".format(
+                        agent_type, location, time))
+                    Y_rewards.append(rewards[agent_type][location][time])
+                    Y_ubs.append(num_agents_in_type)
         Y_indices = self.create_variables(
             names=Y_names,
             rewards=Y_rewards,
             types=[bool_vars_type]*len(Y_names),
             lbs=[0]*len(Y_names),
-            ubs=[1]*len(Y_names),
+            ubs=Y_ubs,
         )
         Y = {}
         y_ix = 0
         for agent_type in agents.keys():
             Y[agent_type] = {}
-            for agent in agents[agent_type]:
-                Y[agent_type][agent] = {}
-                for location in locations:
-                    Y[agent_type][agent][location] = {}
-                    for time in time_horizon:
-                        Y[agent_type][agent][location][time] = Y_indices[y_ix]
-                        y_ix += 1
-                        # Y[agent_type][agent][location][time] = self.create_variables(
-                        #     names="Y[{}][{}][{}][{}]".format(
-                        #         agent_type, agent, location, time),
-                        #     rewards=rewards[agent_type][location][time],
-                        #     types=bool_vars_type,
-                        #     lbs=0,
-                        #     ubs=1,
-                        # )[0]
+            for location in locations:
+                Y[agent_type][location] = {}
+                for time in time_horizon:
+                    Y[agent_type][location][time] = Y_indices[y_ix]
+                    y_ix += 1
+                    # Y[agent_type][agent][location][time] = self.create_variables(
+                    #     names="Y[{}][{}][{}][{}]".format(
+                    #         agent_type, agent, location, time),
+                    #     rewards=rewards[agent_type][location][time],
+                    #     types=bool_vars_type,
+                    #     lbs=0,
+                    #     ubs=1,
+                    # )[0]
 
         # Z: do I perform a private task?
         Z_names = []
         Z_rewards = []
+        Z_ubs = []
         for agent_type in agents.keys():
-            for agent in agents[agent_type]:
-                for location in locations:
-                    for time in time_horizon:
-                        Z_names.append("Z[{}][{}][{}][{}]".format(
-                            agent_type, agent, location, time))
-                        Z_rewards.append(
-                            rewards[common_task_key][location][time])
+            num_agents_in_type = len(agents[agent_type])
+            for location in locations:
+                for time in time_horizon:
+                    Z_names.append("Z[{}][{}][{}]".format(
+                        agent_type, location, time))
+                    Z_rewards.append(
+                        rewards[common_task_key][location][time])
+                    Z_ubs.append(num_agents_in_type)
 
         Z_indices = self.create_variables(
             names=Z_names,
             rewards=Z_rewards,
             types=[bool_vars_type]*len(Z_names),
             lbs=[0]*len(Z_names),
-            ubs=[1]*len(Z_names),
+            ubs=Z_ubs,
         )
 
         Z = {}
         z_ix = 0
         for agent_type in agents.keys():
             Z[agent_type] = {}
-            for agent in agents[agent_type]:
-                Z[agent_type][agent] = {}
-                for location in locations:
-                    Z[agent_type][agent][location] = {}
-                    for time in time_horizon:
-                        Z[agent_type][agent][location][time] = Z_indices[z_ix]
-                        z_ix += 1
-                        # Z[agent_type][agent][location][time] = self.create_variables(
-                        #     names="Z[{}][{}][{}][{}]".format(
-                        #         agent_type, agent, location, time),
-                        #     rewards=rewards[common_task_key][location][time],
-                        #     types=bool_vars_type,
-                        #     lbs=0,
-                        #     ubs=1,
-                        # )[0]
+            for location in locations:
+                Z[agent_type][location] = {}
+                for time in time_horizon:
+                    Z[agent_type][location][time] = Z_indices[z_ix]
+                    z_ix += 1
+                    # Z[agent_type][agent][location][time] = self.create_variables(
+                    #     names="Z[{}][{}][{}][{}]".format(
+                    #         agent_type, agent, location, time),
+                    #     rewards=rewards[common_task_key][location][time],
+                    #     types=bool_vars_type,
+                    #     lbs=0,
+                    #     ubs=1,
+                    # )[0]
 
         # Constraints
         self._verbprint("  Creating constraints")
@@ -216,22 +217,21 @@ class abstract_milp_centralized(object):
         for start_location in locations:
             initial_location_constraints[start_location] = {}
             for agent_type in agents.keys():
-                initial_location_constraints[start_location][agent_type] = {}
+                # for agent in agents[agent_type]:
+                cvars = [X[agent_type][start_location][end_location][time_horizon[0]]
+                            for end_location in network.successors(start_location)]
+                ccoeffs = [
+                    1 for end_location in network.successors(start_location)]
+                rhs = 0.
                 for agent in agents[agent_type]:
-                    cvars = [X[agent_type][agent][start_location][end_location][time_horizon[0]]
-                             for end_location in network.successors(start_location)]
-                    ccoeffs = [
-                        1 for end_location in network.successors(start_location)]
                     if start_location == agent[1]:
-                        rhs = 1.
-                    else:
-                        rhs = 0.
-                    initial_location_constraints[start_location][agent_type][agent] = self.add_constraint(
-                        coefficients=ccoeffs,
-                        variables=cvars,
-                        rhs=rhs,
-                        senses='E',
-                    )[0]
+                        rhs += 1.
+                initial_location_constraints[start_location][agent_type] = self.add_constraint(
+                    coefficients=ccoeffs,
+                    variables=cvars,
+                    rhs=rhs,
+                    senses='E',
+                )[0]
 
         # 1e: flow continuity
         self._verbprint("    Flow Continuity")
@@ -240,24 +240,22 @@ class abstract_milp_centralized(object):
             flow_continuity_constraints[location] = {}
             for agent_type in agents.keys():
                 flow_continuity_constraints[location][agent_type] = {}
-                for agent in agents[agent_type]:
-                    flow_continuity_constraints[location][agent_type][agent] = {
-                    }
-                    for time_index, time in enumerate(time_horizon[:-1]):
-                        cvars = [X[agent_type][agent][start_location][location][time_horizon[time_index]]
-                                 for start_location in network.predecessors(location)]
-                        ccoeffs = [1
-                                   for start_location in network.predecessors(location)]
-                        cvars += [X[agent_type][agent][location][end_location][time_horizon[time_index+1]]
-                                  for end_location in network.successors(location)]
-                        ccoeffs += [-1
-                                    for end_location in network.successors(location)]
-                        flow_continuity_constraints[location][agent_type][agent][time] = self.add_constraint(
-                            coefficients=ccoeffs,
-                            variables=cvars,
-                            rhs=0,
-                            senses='E',
-                        )
+                # for agent in agents[agent_type]:
+                for time_index, time in enumerate(time_horizon[:-1]):
+                    cvars = [X[agent_type][start_location][location][time_horizon[time_index]]
+                                for start_location in network.predecessors(location)]
+                    ccoeffs = [1
+                                for start_location in network.predecessors(location)]
+                    cvars += [X[agent_type][location][end_location][time_horizon[time_index+1]]
+                                for end_location in network.successors(location)]
+                    ccoeffs += [-1
+                                for end_location in network.successors(location)]
+                    flow_continuity_constraints[location][agent_type][time] = self.add_constraint(
+                        coefficients=ccoeffs,
+                        variables=cvars,
+                        rhs=0,
+                        senses='E',
+                    )
 
         # 1g: can only do a task if I am present (1/2, public)
         self._verbprint("    Public Tasks: presence 1/2")
@@ -266,22 +264,19 @@ class abstract_milp_centralized(object):
             task_presence_1_public_constraints[location] = {}
             for agent_type in agents.keys():
                 task_presence_1_public_constraints[location][agent_type] = {}
-                for agent in agents[agent_type]:
-                    task_presence_1_public_constraints[location][agent_type][agent] = {
-                    }
-                    for time in time_horizon:
-                        cvars = [Y[agent_type][agent][location][time]]
-                        ccoeffs = [1]
-                        cvars += [X[agent_type][agent][location][end_location][time]
-                                  for end_location in network.successors(location)]
-                        ccoeffs += [-1
-                                    for end_location in network.successors(location)]
-                        task_presence_1_public_constraints[location][agent_type][agent][time] = self.add_constraint(
-                            coefficients=ccoeffs,
-                            variables=cvars,
-                            rhs=0,
-                            senses='L',
-                        )
+                for time in time_horizon:
+                    cvars = [Y[agent_type][location][time]]
+                    ccoeffs = [1]
+                    cvars += [X[agent_type][location][end_location][time]
+                                for end_location in network.successors(location)]
+                    ccoeffs += [-1
+                                for end_location in network.successors(location)]
+                    task_presence_1_public_constraints[location][agent_type][time] = self.add_constraint(
+                        coefficients=ccoeffs,
+                        variables=cvars,
+                        rhs=0,
+                        senses='L',
+                    )
 
         # 1h: can only do a task if I am present (2/2, redundant, public)
         self._verbprint("    Public Tasks: presence 2/2")
@@ -289,30 +284,28 @@ class abstract_milp_centralized(object):
         for location in locations:
             task_presence_2_public_constraints[location] = {}
             for agent_type in agents.keys():
-                task_presence_2_public_constraints[location][agent_type] = {}
-                for agent in agents[agent_type]:
-                    cvars = [Y[agent_type][agent][location][time_horizon[-1]]]
-                    ccoeffs = [1]
-                    cvars += [X[agent_type][agent][start_location][location][time_horizon[-2]]
-                              for start_location in network.predecessors(location)]
-                    ccoeffs += [-1
-                                for start_location in network.predecessors(location)]
-                    task_presence_2_public_constraints[location][agent_type][agent] = self.add_constraint(
-                        coefficients=ccoeffs,
-                        variables=cvars,
-                        rhs=0,
-                        senses='L',
-                    )
+                cvars = [Y[agent_type][location][time_horizon[-1]]]
+                ccoeffs = [1]
+                cvars += [X[agent_type][start_location][location][time_horizon[-2]]
+                            for start_location in network.predecessors(location)]
+                ccoeffs += [-1
+                            for start_location in network.predecessors(location)]
+                task_presence_2_public_constraints[location][agent_type] = self.add_constraint(
+                    coefficients=ccoeffs,
+                    variables=cvars,
+                    rhs=0,
+                    senses='L',
+                )
         # 1i: public tasks are only done once
         self._verbprint("    Public Tasks: completion")
         task_completion_public_constraints = {}
         for location in locations:
             task_completion_public_constraints[location] = {}
             for time in time_horizon:
-                cvars = [Y[agent_type][agent][location][time]
-                         for agent_type in agents.keys() for agent in agents[agent_type]]
+                cvars = [Y[agent_type][location][time]
+                         for agent_type in agents.keys()]
                 ccoeffs = [1
-                           for agent_type in agents.keys() for agent in agents[agent_type]]
+                           for agent_type in agents.keys()]
 
                 task_completion_public_constraints[location][time] = self.add_constraint(
                     coefficients=ccoeffs,
@@ -328,42 +321,37 @@ class abstract_milp_centralized(object):
             task_presence_1_private_constraints[location] = {}
             for agent_type in agents.keys():
                 task_presence_1_private_constraints[location][agent_type] = {}
-                for agent in agents[agent_type]:
-                    task_presence_1_private_constraints[location][agent_type][agent] = {
-                    }
-                    for time in time_horizon:
-                        cvars = [Z[agent_type][agent][location][time]]
-                        ccoeffs = [1]
-                        cvars += [X[agent_type][agent][location][end_location][time]
-                                  for end_location in network.successors(location)]
-                        ccoeffs += [-1
-                                    for end_location in network.successors(location)]
-                        task_presence_1_private_constraints[location][agent_type][agent][time] = self.add_constraint(
-                            coefficients=ccoeffs,
-                            variables=cvars,
-                            rhs=0,
-                            senses='L',
-                        )
+                for time in time_horizon:
+                    cvars = [Z[agent_type][location][time]]
+                    ccoeffs = [1]
+                    cvars += [X[agent_type][location][end_location][time]
+                                for end_location in network.successors(location)]
+                    ccoeffs += [-1
+                                for end_location in network.successors(location)]
+                    task_presence_1_private_constraints[location][agent_type][time] = self.add_constraint(
+                        coefficients=ccoeffs,
+                        variables=cvars,
+                        rhs=0,
+                        senses='L',
+                    )
         # 1l: can only do a task if I am present (2/2, redundant, private)
         self._verbprint("    Private Tasks: presence 2/2")
         task_presence_2_private_constraints = {}
         for location in locations:
             task_presence_2_private_constraints[location] = {}
             for agent_type in agents.keys():
-                task_presence_2_private_constraints[location][agent_type] = {}
-                for agent in agents[agent_type]:
-                    cvars = [Z[agent_type][agent][location][time_horizon[-1]]]
-                    ccoeffs = [1]
-                    cvars += [X[agent_type][agent][start_location][location][time_horizon[-2]]
-                              for start_location in network.predecessors(location)]
-                    ccoeffs += [-1
-                                for start_location in network.predecessors(location)]
-                    task_presence_2_private_constraints[location][agent_type][agent] = self.add_constraint(
-                        coefficients=ccoeffs,
-                        variables=cvars,
-                        rhs=0,
-                        senses='L',
-                    )
+                cvars = [Z[agent_type][location][time_horizon[-1]]]
+                ccoeffs = [1]
+                cvars += [X[agent_type][start_location][location][time_horizon[-2]]
+                            for start_location in network.predecessors(location)]
+                ccoeffs += [-1
+                            for start_location in network.predecessors(location)]
+                task_presence_2_private_constraints[location][agent_type] = self.add_constraint(
+                    coefficients=ccoeffs,
+                    variables=cvars,
+                    rhs=0,
+                    senses='L',
+                )
         # 1m: private tasks are only done once
         self._verbprint("    Private Tasks: completion")
         task_completion_private_constraints = {}
@@ -372,11 +360,8 @@ class abstract_milp_centralized(object):
             for time in time_horizon:
                 task_completion_private_constraints[location][time] = {}
                 for agent_type in agents.keys():
-                    cvars = [Z[agent_type][agent][location][time]
-                             for agent in agents[agent_type]]
-                    ccoeffs = [1
-                               for agent in agents[agent_type]]
-
+                    cvars = [Z[agent_type][location][time]]
+                    ccoeffs = [1]
                     task_completion_private_constraints[location][time][agent_type] = self.add_constraint(
                         coefficients=ccoeffs,
                         variables=cvars,
@@ -386,27 +371,33 @@ class abstract_milp_centralized(object):
 
     def compute_trajectories(self):
         assert self.solved, "ERROR: cannot compute trajectories before solving problem. Call self.solve()"
+        local_Xval = deepcopy(self.Xval)
         agent_trajectories = {}
         for agent_type in self.agents.keys():
             agent_trajectories[agent_type] = {}
             for agent in self.agents[agent_type]:
                 trajectory = []
                 locs = []
+                start_location = agent[1]
                 for time in self.time_horizon:
-                    for start_location in self.network.nodes():
-                        for end_location in self.network.successors(start_location):
-                            if self.Xval[agent_type][agent][start_location][end_location][time] != 0:
-                                # print("Found nonzero")
-                                # print(
-                                #     f"agent_type: {agent_type}, agent: {agent} start_location: {start_location}, end_location: {end_location}, time: {time}")
-                                trajectory.append(
-                                    (time, (start_location, end_location)))
-                                if len(locs) == 0:
-                                    locs.append(start_location)
-                                else:
-                                    assert locs[-1] == start_location, "ERROR: discontinuous trajectory"
-                                locs.append(end_location)
+                    # for start_location in self.network.nodes():
+                    for end_location in self.network.successors(start_location):
+                        if local_Xval[agent_type][start_location][end_location][time] != 0:
+                            # print("Found nonzero")
+                            # print(
+                            #     f"agent_type: {agent_type}, agent: {agent} start_location: {start_location}, end_location: {end_location}, time: {time}")
+                            trajectory.append(
+                                (time, (start_location, end_location)))
+                            if len(locs) == 0:
+                                locs.append(start_location)
+                            else:
+                                assert locs[-1] == start_location, "ERROR: discontinuous trajectory"
+                            locs.append(end_location)
+                            local_Xval[agent_type][start_location][end_location][time] -= 1.
+                            start_location = end_location
+                            break
 
+                # print("Trajectory for agent {} has length {}".format(agent, len(locs)))
                 agent_trajectories[agent_type][agent] = {
                     'trajectory': trajectory, 'locations': locs}
         return agent_trajectories
@@ -532,83 +523,74 @@ class cplex_milp_centralized(abstract_milp_centralized):
         X_names = []
         # X_indices = []
         for agent_type in agents.keys():
-            for agent in agents[agent_type]:
-                for start_location in locations:
-                    for end_location in network.successors(start_location):
-                        for time in time_horizon:
-                            X_name = "X[{}][{}][{}][{}][{}]".format(
-                                agent_type, agent, start_location, end_location, time)
-                            X_names.append(X_name)
-                            # X_indices.append((agent_type,agent,start_location,end_location,time))
-                            # WIll raise an error if name is not present
-                            # Xval[agent_type][agent][start_location][end_location][time] = self.problem.solution.get_values(
-                            #    # X_name)
+            for start_location in locations:
+                for end_location in network.successors(start_location):
+                    for time in time_horizon:
+                        X_name = "X[{}][{}][{}][{}]".format(
+                            agent_type, start_location, end_location, time)
+                        X_names.append(X_name)
+                        # X_indices.append((agent_type,agent,start_location,end_location,time))
+                        # WIll raise an error if name is not present
+                        # Xval[agent_type][agent][start_location][end_location][time] = self.problem.solution.get_values(
+                        #    # X_name)
         Xvals = self.problem.solution.get_values(X_names)
         ix = 0
         Xval = {}
         for agent_type in agents.keys():
             Xval[agent_type] = {}
-            for agent in agents[agent_type]:
-                Xval[agent_type][agent] = {}
-                for start_location in locations:
-                    Xval[agent_type][agent][start_location] = {}
-                    for end_location in network.successors(start_location):
-                        Xval[agent_type][agent][start_location][end_location] = {}
-                        for time in time_horizon:
-                            Xval[agent_type][agent][start_location][end_location][time] = Xvals[ix]
-                            ix += 1
+            for start_location in locations:
+                Xval[agent_type][start_location] = {}
+                for end_location in network.successors(start_location):
+                    Xval[agent_type][start_location][end_location] = {}
+                    for time in time_horizon:
+                        Xval[agent_type][start_location][end_location][time] = Xvals[ix]
+                        ix += 1
         self._verbprint("    Y")
         Y_names = []
         for agent_type in agents.keys():
-            for agent in agents[agent_type]:
-                for location in locations:
-                    for time in time_horizon:
-                        Y_name = "Y[{}][{}][{}][{}]".format(
-                            agent_type, agent, location, time)
-                        Y_names.append(Y_name)
-                        # Yval[agent_type][agent][location][time] = self.problem.solution.get_values(
-                        #    Y_name)
+            for location in locations:
+                for time in time_horizon:
+                    Y_name = "Y[{}][{}][{}]".format(
+                        agent_type, location, time)
+                    Y_names.append(Y_name)
+                    # Yval[agent_type][agent][location][time] = self.problem.solution.get_values(
+                    #    Y_name)
 
         Yvals = self.problem.solution.get_values(Y_names)
         Yval = {}
         ix = 0
         for agent_type in agents.keys():
             Yval[agent_type] = {}
-            for agent in agents[agent_type]:
-                Yval[agent_type][agent] = {}
-                for location in locations:
-                    Yval[agent_type][agent][location] = {}
-                    for time in time_horizon:
-                        Y_name = "Y[{}][{}][{}][{}]".format(
-                            agent_type, agent, location, time)
-                        Yval[agent_type][agent][location][time] = Yvals[ix]
-                        ix += 1
+            for location in locations:
+                Yval[agent_type][location] = {}
+                for time in time_horizon:
+                    Y_name = "Y[{}][{}][{}]".format(
+                        agent_type, location, time)
+                    Yval[agent_type][location][time] = Yvals[ix]
+                    ix += 1
 
         self._verbprint("    Z")
         Z_names = []
         for agent_type in agents.keys():
-            for agent in agents[agent_type]:
-                for location in locations:
-                    for time in time_horizon:
-                        Z_name = "Z[{}][{}][{}][{}]".format(
-                            agent_type, agent, location, time)
-                        Z_names.append(Z_name)
-                        # Zval[agent_type][agent][location][time]=self.problem.solution.get_values(
-                        #     Z_name)
+            for location in locations:
+                for time in time_horizon:
+                    Z_name = "Z[{}][{}][{}]".format(
+                        agent_type, location, time)
+                    Z_names.append(Z_name)
+                    # Zval[agent_type][agent][location][time]=self.problem.solution.get_values(
+                    #     Z_name)
         Zvals = self.problem.solution.get_values(Z_names)
         Zval = {}
         ix = 0
         for agent_type in agents.keys():
             Zval[agent_type] = {}
-            for agent in agents[agent_type]:
-                Zval[agent_type][agent] = {}
-                for location in locations:
-                    Zval[agent_type][agent][location] = {}
-                    for time in time_horizon:
-                        Z_name = "Z[{}][{}][{}][{}]".format(
-                            agent_type, agent, location, time)
-                        Zval[agent_type][agent][location][time] = Zvals[ix]
-                        ix += 1
+            for location in locations:
+                Zval[agent_type][location] = {}
+                for time in time_horizon:
+                    Z_name = "Z[{}][{}][{}]".format(
+                        agent_type, location, time)
+                    Zval[agent_type][location][time] = Zvals[ix]
+                    ix += 1
 
         initial_location_duals = None
         flow_continuity_duals = None

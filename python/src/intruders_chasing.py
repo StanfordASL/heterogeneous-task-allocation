@@ -52,12 +52,16 @@ def solve_intruders_problem(rows_num, cols_num, num_agent_types, agents_per_type
         agent_color = '#%02X%02X%02X' % (r(), r(), r())
         agent_colors[agent_type] = agent_color
         agents[agent_type] = []
+        agent_initial_location = (
+            random.randint(0, rows_num-1),
+            random.randint(0, cols_num-1)
+        )
         for agent_id in range(agents_per_type):
             agent_name = f'{agent_type}:{agent_id}'
-            agent_initial_location = (
-                random.randint(0, rows_num-1),
-                random.randint(0, cols_num-1)
-            )
+            # agent_initial_location = (
+            #     random.randint(0, rows_num-1),
+            #     random.randint(0, cols_num-1)
+            # )
             agents[agent_type].append(
                 (agent_name, agent_initial_location, agent_color)
             )
@@ -71,18 +75,18 @@ def solve_intruders_problem(rows_num, cols_num, num_agent_types, agents_per_type
             agents=agents,
             common_task_key=common_task_label,
             verbose=False,
-            linear_program=True
+            linear_program=False
         )
 
         opt_val, Xval, Yval, Zval, duals = problem.solve()
-        #agent_trajectories = problem.compute_trajectories()
-        print(opt_val)
+        agent_trajectories = problem.compute_trajectories()
+        # print(opt_val)
     elif solver == "Homogeneous":
         # Only solve for the common tasks
         rewards_homogeneous = rewards[common_task_label]
-        #print(agents)
+        # print(agents)
         agents_homogeneous = agents[list(agents.keys())[0]]
-        #print(agents_homogeneous)
+        # print(agents_homogeneous)
         problem = cplex_lp_homogeneous_centralized(
             network=G,
             rewards=rewards_homogeneous,
@@ -149,9 +153,8 @@ def solve_intruders_problem(rows_num, cols_num, num_agent_types, agents_per_type
 
         opt_val, Xval, Yval, Zval = problem.solve()
         print(opt_val)
-        #agent_trajectories = problem.compute_trajectories()
-        return
-    
+        agent_trajectories = problem.compute_trajectories()
+
     elif solver == "PTAS_distributed":
         print("Good luck, Kiril!")
         return
@@ -163,14 +166,14 @@ def solve_intruders_problem(rows_num, cols_num, num_agent_types, agents_per_type
     if _plot:
         print("Plot the problem")
 
-        plot_trajectories(G, agents, rewards, agent_trajectories)
+        video_time = datetime.now().strftime("%m_%d_%Y_%H-%M-%S")
+
+        plot_trajectories(G, agents, rewards, agent_trajectories, plot_name=f"plot_trajectories_{solver}_{video_time}.png")
         print("Make a movie")
         reward_colors = {}
         reward_colors[common_task_label] = '#010101'
         for agent_type, agent_color in agent_colors.items():
             reward_colors[agent_type] = agent_color
-
-        video_time = datetime.now().strftime("%m_%d_%Y_%H-%M-%S")
 
         video_trajectories(
             G,
@@ -181,7 +184,7 @@ def solve_intruders_problem(rows_num, cols_num, num_agent_types, agents_per_type
             video_name=f"video_trajectories_{solver}_{video_time}.mp4"
         )
 
-    return
+    return agent_trajectories
 
 
 def create_lattice_graph(rows_num, cols_num):
@@ -251,30 +254,32 @@ if __name__ == "__main__":
 
     # These are the agent types
     common_task_label = 'C'
-    num_agent_types = 2
+    num_agent_types = 3
     # And there are this many agents per type
-    agents_per_type = 5
-    max_intruders_per_type = 3
+    agents_per_type = 6
+    max_intruders_per_type = 6
 
     # And this is the time horizon
-    Thor = 20
+    Thor = 30
 
     # Random seed for problem generation
     seed = 30
 
-    timing = [ ]
-    solvers = ["MILP", "Homogeneous", "Homogeneous_distributed", "PTAS", "PTAS_distributed"]
+    timing = []
+    solvers = ["MILP", "Homogeneous",
+               "Homogeneous_distributed", "PTAS", "PTAS_distributed"]
     solvers_partial = ["MILP"]
+    trajectories = {}
 
     for sol in solvers_partial:
         print(sol)
         start = time.time()
         random.seed(seed)
-        
-        solve_intruders_problem(rows_num, cols_num, num_agent_types,
-                                agents_per_type, max_intruders_per_type, Thor, common_task_label, solver=sol, _plot=False)
+
+        trajectories[sol] = solve_intruders_problem(rows_num, cols_num, num_agent_types,
+                                                    agents_per_type, max_intruders_per_type, Thor, common_task_label, solver=sol, _plot=True)
         end = time.time()
         timing.append(end - start)
-        print(timing[-1])
+        print("Time: ", timing[-1])
 
-    #print(timing)
+    # print(timing)

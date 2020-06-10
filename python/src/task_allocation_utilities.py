@@ -26,7 +26,11 @@ import subprocess
 from datetime import datetime
 
 
-def plot_trajectories(network, agents, rewards, agent_trajectories):
+def plot_trajectories(network, agents, rewards, agent_trajectories, plot_name=None):
+
+    if plot_name is None:
+        plot_name = "plot.png"
+
     task_types = list(rewards.keys())
     locations = list(network.nodes)
     time_horizon = list(rewards[task_types[0]][locations[0]].keys())
@@ -70,7 +74,7 @@ def plot_trajectories(network, agents, rewards, agent_trajectories):
                 )/len(nodes_traj)
                 # cmap=plt.cm.Blues
             )
-    plt.savefig("plot.png", format="PNG")
+    plt.savefig(plot_name)
 
 
 def video_trajectories(network, agents, rewards, agent_trajectories, reward_colors=None, video_name=None):
