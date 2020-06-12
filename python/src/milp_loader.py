@@ -71,8 +71,7 @@ def importer(path):
         for row in reader_init[1:]:
             f = int(row[0])
             v = int(row[1])
-            if len(init[f])==0: #kiril
-                init[f].append(v)
+            init[f].append(v)
 
     agents = {}
     for agent_type in range(fleets):
