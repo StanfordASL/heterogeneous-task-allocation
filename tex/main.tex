@@ -361,13 +361,13 @@ For a given $f\in \F$, denote by $x^f$ the corresponding values of the $x$ assig
 We present the private-first-shared-first (\alg) algorithm for heterogeneous task allocation (see  Algorithm~\ref{alg:main}). It accepts as input the specification of the agents and the entire reward set $\dR=\{R^0,R^1,\ldots,R^F\}$. It then obtains two candidate solutions $(x,y,z),(x',y',z')$ and returns the one maximizing the reward for the heterogeneous problem. 
 
 \begin{algorithm}[!ht]
-  $(x,y,z)\gets \private(\A,\dR)$\;
-  $(x',y',z')\gets \shared(\A,\dR)$\;
+  $(x,y,z)\gets \private(\dR,p_0)$\;
+  $(x',y',z')\gets \shared(\dR,p_0)$\;
   \If {$\R(x,y,z)>\R(x',y',z')$}{
     \Return $(x,y,z)$\;
     }
   \Return $(x',y',z')$\;
-  \caption{\alg$(\A,\dR)$}
+  \caption{\alg$(\dR,p_0)$}
   \label{alg:main}
 \end{algorithm} 
 
@@ -376,7 +376,7 @@ In lines 4-8 the solutions of the individual fleets are combined to eliminate ca
 
 \begin{algorithm}[!ht]
   $\hat{R}^f\gets R^f+R^0\cdot F^{-1}, \forall f\in \F$\;
-  $(x^f,z^f)\gets \H(\hat{R}^f,\A^f), \forall f\in \F$\;
+  $(x^f,z^f)\gets \H(\hat{R}^f,p_0^f), \forall f\in \F$\;
   $x\gets \{x^f\}_{f\in \F},z\gets\{z^f\}_{f\in \F}$\;
   $y\gets \{\{0\}_{q\in \A}\}_{\tau \in [T]}$\;
   \For{$\tau\in [T], j\in \V$}{
@@ -388,27 +388,29 @@ In lines 4-8 the solutions of the individual fleets are combined to eliminate ca
         }
     }
   \Return $(x,y,z)$\;
-  \caption{$\private(\A,\dR)$}
+  \caption{$\private(\dR,p_0)$}
   \label{alg:private}
 \end{algorithm} 
 
 The \shared subroutine (Algorithm~\ref{alg:shared}) prioritizes the assignment of shared rewards, by first computing the an assignment for all the agents $\A$ to the shared reward set $R^0$, to maximize the total reward. This is achieved by calling $\H(R^0,\A)$.  It then generates an updated reward set $\bar{R}^f$ for every fleet $f\in \F$, where the value of a reward $\bar{R}^f_\tau [j]$ is equal to $R^f_\tau [j]$ in case that $R^0_\tau[j]$ was not assigned to $f$, and otherwise equal to $R^f_\tau [j]+R^0_\tau[j]$. Next, for every fleet $f$ the private assignment $(x^f,z^f)$ over $\bar{R}^f$ is computed. Observe that $z$ represents simultaneously assignments for shared and private rewards.
 
 \begin{algorithm}[!ht]
-    $(\bar{x},\bar{y})\gets \H(\A,R^0)$\; 
+    $(\bar{x},\bar{y})\gets \H(R^0,p_0)$\; 
     %$\bar{R}^f\gets R^f, \forall f\in \F$\;
     \For{$f\in \F, \tau\in [T], j\in \V$}{
         $\bar{R}^f_\tau[j]\gets {R}^f_\tau[j]+R^0_\tau[j]\cdot\bar{y}_\tau^f[j]$\;
     }
-  $(x^f,z^f)\gets \H(\bar{R}^f,\A^f), \forall f\in \F$\;
+  $(x^f,z^f)\gets \H(\bar{R}^f,p_0), \forall f\in \F$\;
   $x\gets \{x^f\}_{f\in \F},z\gets\{z^f\}_{f\in \F}$\;
   \Return $(x,z,z)$\;
-  \caption{$\shared(\A,\dR)$}
+  \caption{$\shared(\dR,p_0)$}
   \label{alg:shared}
 \end{algorithm} 
 
 \subsection{Analysis}
 In this section, we show that, for a given number of fleets $F$, the PFSF algorithm is guaranteed to achieve a solution within a constant factor of the optimum. Then we provide a computational analysis of the approach.
+
+\todo{Define $S^*,P^*$ for the optimal value for the shared and private rewards. Consider two cases for the shared reward. Include in the main theorem a consideratin for the case that $P^*\neq 0$, in which case there exists $\Delta$ such that $S^*:=\Delta P^*$.}
 
 Let $(x,y,z)$ be an assignment returned by \alg. With a slight abuse of notation, we use $\R(x^f,y^f,z^f)$ to represent the reward obtained by agents of fleet $f\in \F$ (where assignments values of agents in other fleets are set to $0$). Similarly, $\R(x,y,\bm{0}), \R(x,\bm{0},z)$ represent the reward gained from shared rewards and private rewards, respectively, where $\bm{0}$ represents the zero vector (whose dimension will be clear from context). 
 

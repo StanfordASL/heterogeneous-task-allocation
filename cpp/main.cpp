@@ -366,7 +366,6 @@ double solvePFSF(const Graph& workspace, const vector<vector<vector<double>>>& r
 
 	cout << "privateFirst reward = " << r1 << endl;
 	cout << "sharedFirst reward = " << r2 << endl;
-	
 
 	if (r1 < r2)
 	{
@@ -452,9 +451,10 @@ int importer(const string& path, Graph& workspace_graph, vector<vector<vector<do
 	return times;
 }
 
-int main()
+int main(int argc, char** argv)
 {
-	string path = "./../data";
+	string path = argv[1];
+	
 	Graph workspace;
 	vector<vector<vector<double>>> rewards;
 	vector<vector<int>> init;
@@ -469,12 +469,12 @@ int main()
 
 	clock_t start = clock();
 
-	double R = solvePFSF(workspace, rewards, init, x, y ,z);
+	double R = - solvePFSF(workspace, rewards, init, x, y ,z);
 
 	double duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
 
-    cout << "running time in seconds: " << duration << endl;
-	cout << "solution to PFSF with reward " << R << endl;
+	cout << "time:" <<  duration << endl;
+	cout << "reward:" <<  R << endl;
 
 	/*
 	cout << "x values (fleet, time, origin, destination, value)" << endl;
