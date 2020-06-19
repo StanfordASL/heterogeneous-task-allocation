@@ -253,11 +253,11 @@ The agents are mobile and transition from one vertex $i\in \V$ to another $j\in 
 For a given fleet $f\in \F$, the positions of its agents at time $\tau\in [T]$ are specified by $p^f_\tau\in [a_f]^{ |\V|}$, where for a given $i\in \V$, $p^f_\tau[i]$, specifies the number of agents of $\A^f$ located at the vertex. %Agents can move Given that agent $q\in \A$ is located in $i\in \V$ at time step $\tau\in [T-1]$ (i.e., $p^q_\tau[i]=1$), it moves to an adjacent vertex $j\in \E_+(i)$ in the next time step (i.e., $p^q_{\tau+1}[j]==1$), 
 
 \subsection{Shared and Private Task Sets}
-The problem consists of allocating agents to tasks which consist of collecting rewards along the vertices of $\G$. For now, we assume that the distributions of rewards are known in advance. An extension in which rewards are predicted according to a stochastic process is discussed in \Cref{sec:extensions}.
+The problem consists of allocating agents to tasks which consist of collecting rewards along the time-expanded vertices of $\G$. For now, we assume that the distributions of rewards are known in advance. An extension in which rewards are predicted according to a stochastic process is discussed later on.
 
 There are $F+1$ types of rewards $R^0,R^1,\ldots,R^F$, which determine the values gained by the agents for visiting any given vertex $i\in \V$ at time $\tau\in [T]$.
-The type $t\in [F]$ denotes the ability of agents to collect the reward, or to execute a task associated with the reward. Specifically, rewards of type $t=0$ are considered to be \emph{shared}, i.e., can be collected by any robot of any fleet $f\in F\setminus \{0\}$. In particular, for any $i\in \V, \tau\in [T]$, the system gains the reward $R^0_\tau[i_\tau]$ if $\sum_{f\in \F}p^f_\tau[i]\geq 1$, i.e.,  at least one agent (from any fleet) visits the vertex $i$ at time $\tau$.
-In contrast, tasks of type $t \neq 0$ are considered to be \emph{private}, and can only be gained via  agents from the particular fleet $\A^f$ such that $f=t$. That is, when $t\neq 0$ then for any $i\in \V,\tau\in [T]$, the system gains the reward $R^f_\tau[i]$ if $p^f_\tau[i]\geq 1$, i.e.,  at least one agent from $A^t$ visits the vertex $i$ at time $\tau$. 
+The type $t\in [F]$ denotes the ability of agents to collect the reward, or to execute a task associated with the reward. Specifically, rewards of type $t=0$ are considered to be \emph{shared}, i.e., can be collected by any robot of any fleet $f\in \F$. In particular, for any $i\in \V, \tau\in [T]$, the system gains the reward $R^0_\tau[i_\tau]$ if $\sum_{f\in \F}p^f_\tau[i]\geq 1$, i.e.,  at least one agent (from any fleet) visits the vertex $i$ at time $\tau$.
+In contrast, tasks of type $t \neq 0$ are considered to be \emph{private}, and can only be gained via  agents from the particular fleet $\A^f$ such that $f=t$. That is, when $t\neq 0$ then for any $i\in \V,\tau\in [T]$, the system gains the reward $R^t_\tau[i]$ if $p^t_\tau[i]\geq 1$, i.e.,  at least one agent from $\A^t$ visits the vertex $i$ at time $\tau$. 
 
 
 \subsection{Problem Formulation}
@@ -269,18 +269,33 @@ The scheme is described through two types of decision variables. We use the disc
 We use the decision variable $y^f_\tau[i]\in \{0,1\}$ to indicate whether an agent from $\A^f$ is assigned to collect the shared reward $R^0_\tau[i]$. 
 Similarly, for a given $f\in \F$, the variable $z^f_\tau[i]\in \{0,1\}$ indicates whether an agent in $\A^f$  is assigned to collect the private reward $R^f_\tau[i]$. 
 
-The objective function is given in Equation~\eqref{eq:objective_function_new} in Table~\ref{tbl:problem}. Equation~\eqref{eq:flow_conservation} ensures the flow conservation of agents. 
+The objective function is given in Equation~\eqref{eq:objective_het} in Table~\ref{tbl:heterogeneous}. Equation~\eqref{eq:flow_conservation} ensures the flow conservation of agents. 
 Equations~\eqref{eq:bound_y_1}, \eqref{eq:bound_y_2}, \eqref{eq:bound_z_1}, \eqref{eq:bound_z_2} ensure that an agent is assigned to a task only if it is present in the corresponding vertex.    Equations~\eqref{eq:bound_y_3}, \eqref{eq:bound_z_3} limit the number of agents assigned to every type of task in a given vertex to $1$. 
 %\todo{Mention that we wish to solve this problem in a distributed manner.}
 
+\subsection{Predictive Formulation}
+We mention that that the above formulation can be easily adapted to the predictive setting. Namely, in this case the precise value of the rewards $R^0,\ldots,R^f$ are only known for the current timestep $\tau=0$, but a stochastic model of the evolution of rewards with respect to time is available in order to predict the rewards' behavior. To exploit the aforementioned deterministic formulation, it is straightforward to show that by plugging into the problem defined in Table~\ref{tbl:heterogeneous} the expected values of the stochastic rewards, the solution would maximize the expected gained reward. This in turn gives rise to a receding-horizon implementation: given the current state of the system (e.g., locations of agents and values of current rewards) we predict the reward values $R^0,\ldots,R^F$ for $T$ time steps into the future, and then compute a plan specified by $x,y,z$. We then execute this plan for the first time step, obtain current values of the reward, and repeat this process all over again. 
+
+We proceed to provide some concrete definitions and an example.
+\ksline{I'm not sure how to write formally the definition for the evolving tasks. Can anyone assist?}
+
+To make those definition more concrete, suppose we have two tasks which represent tracking of two distinct objects (one in each task), where the reward for successful tracking are $1, 2$, respectively. Also assume that the objects are confined to a $3\times 3$ grid graph, and that in each time step, each object selects one of its neighbors uniformly at random (and cannot stay in the same vertex). Figure \ref{fig:distribution_and_reward} shows the expected reward $T^t$ for the two task classes (depicted in blue and red respectively) across three time steps.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=.35\textwidth]{fig/distribution_and_reward.pdf}
+\caption{Expected reward for two task classes. The tasks require tracking of an object moving to adjacent cells according to a random walk.}
+\label{fig:distribution_and_reward}
+\end{figure}
+
 \subsection{Discussion}
-\todo{Mention that we simply want to know where every edge $q$ is going to be and we don't actually need the whole representation of $x^q$.}
 \todo{Mention the limitation of our model. Namely that we do not permit settings in which the reward changes based on our actions. }
 \todo{Mention that formulation can extend to travel cost.}
-We mention that a setting with a similar partition between agents has be explored in~\cite{PrasadETAL18}, albeit for a different problem formulation consisting of computing multiple travelling-salesman routes in an undirected and time-invariant graph. Table~\ref{tbl:problem} is a mixed-integer linear program, and its complexity scales exponentially with the number of variables. Furthermore, the formulation is centralized, requiring a node to solve the full problem and then communicate to agents their allocations. In this paper, we propose a distributed approximation algorithm that tackles both these difficulties. In the next section, we propose a centralized approximation algorithm that relies on solving a sequence of linear programs, while a distributed implementation is proposed in Section~\ref{sec:distributed_implementation}.
+We mention that a setting with a similar partition between agents has be explored in~\cite{PrasadETAL18}, albeit for a different problem formulation consisting of computing multiple travelling-salesman routes in an undirected and time-invariant graph. Table~\ref{tbl:problem} is a mixed-integer linear program, and its complexity scales exponentially with the number of variables. %Furthermore, the formulation is centralized, requiring a node to solve the full problem and then communicate to agents their allocations. %In this paper, we propose a distributed approximation algorithm that tackles both these difficulties. 
+In the following sections, we develop a centralized approximation algorithm that relies on solving a sequence of homogeneous subproblems. %linear programs, while a distributed implementation is proposed in Section~\ref{sec:distributed_implementation}.
 
 \section{Algorithm for the Homogeneous Case}
-In preparation to tackling heterogeneous problem presented in the previous section, we first consider the simplified homogeneous subcase. Namely, the homogeneous problem consist of a single fleet of homogeneous agents $\A^f$ and a single individual task set $T^f$. In this section we show that an optimal solution to the homogeneous problem can be found efficiently using an approach for the min-cost flow problem, which will be defined below. An algorithm for solving the homogeneous setting will then be employed in the next section as a subroutine to achieve a polynomial-time approximation for the heterogeneous case.
+In preparation to tackling the heterogeneous problem presented in the previous section, we first consider the simplified homogeneous subcase. Namely, the homogeneous problem consist of a single fleet of homogeneous agents $\A^f$ and a single individual reward set $R^f$. In this section we show that an optimal solution to the homogeneous problem can be found efficiently using an approach for the min-cost flow problem, which will be defined below. An algorithm for solving the homogeneous setting will then be employed in the next section as a subroutine to achieve a polynomial-time approximation for the heterogeneous case.
 
 \begin{table}[!ht]
 \label{tbl:homogeneous}
@@ -299,20 +314,20 @@ Given the graph $\G$, time horizon $T\in \dN_{>0}$, agent fleet $A^f$, initial p
 \caption{Definition of the heterogeneous task-allocation problem.}
 \end{table}
 
-For given $R^f, \A^f$, $\H(R^f, \A^f)$ denotes the homogenenous optimization problem in Table \ref{tbl:homogeneous}, and the pair $(x^f,z^f)$ is the optimal solution of this homogeneous problem.
-Also note that the problem of assigning the set of shared tasks $R^0$ to all the agents $\A$, while ignoring the assignment of private tasks, can be viewed as the homogeneous problem $\H(R^0,\A)$.
+For a given reward set $R^f$ and initial positions of $\A^f$ encoded through $0^f$, we denote by  $\H(R^f, p_0^f)$ the homogenenous optimization problem in Table \ref{tbl:homogeneous}.%, and the pair $(x^f,z^f)$ is the optimal solution of this homogeneous problem.
+Note that the problem of assigning the set of shared tasks $R^0$ to all the agents $\A$, while ignoring the assignment of private tasks, can be viewed as the homogeneous problem $\H(R^0,p)$.
  
 The motivation for considering the homogeneous case is given in the following theorem, which states that an optimal solution to this problem can be obtained in (low-degree) polynomial time.
 
 \begin{theorem}\label{thm:homogeneous}
-  For any $f\in \F$, the optimal solution for $\H(R^f, \A^f)$ (similarly for $R^0,\A$) can be computed in 
+  For any $f\in \F$, the optimal solution for $\H(R^f, p^f_0)$ (similarly for $\H(R^0,p_0)$) can be computed in 
   $$\O\left(T^2mn\log (Tn)+T^2n^2\log (Tn)\right)$$
   time, where $m=|\E|,n=|V|$. 
 \end{theorem}
 \begin{proof}
   In this proof we show that the homogeneous problem can be transformed into a min-cost flow (MCF) problem~\cite{Williamson2019}, for which an optimal solution can be efficiently found. In the remainder of this proof we define the ingredients for MCF, then provide a formal definition of the problem, and then discuss its complexity.
 
-MCF is defined for a directed graph whose edges are weighted and have capacity constraints. For a given instance $R^f, \A^f$ we define the graph $\dG=(\dV,\dE)$, where
+MCF is defined for a directed graph whose edges are weighted and have capacity constraints. For a given instance $\H(R^f,p^f)$ we define the graph $\dG=(\dV,\dE)$, where
 $$\dV=\{s,g\}\cup\{v^i_\tau,w^i_\tau|i\in \V,\tau\in T\}.$$
 That is, the vertex set consists of the vertices $s$ and $g$, which will be used as the source and sink of the flow, respectively, as well as two copies $v^i_\tau,w^i_\tau$ of every vertex $v\in \V$ for each time step $\tau\in T$. 
 
@@ -328,7 +343,7 @@ Namely, edges in $E_s$ connect the source vertex $s$ to all the vertices which f
 
 Next, we assign costs $c$ for the edges in $\dE$. In particular, for any $e\in \dE\setminus E_R$ we set $c_e:=0$. For a given $e'\in(v^i_\tau,w^i_\tau)\in E_R$ we set $c_{e'}:=-R^f_\tau[i]$. The final ingredient to the MCF problem is edge capacities $u$. For any $e\in E_g\cup E_0\cup E_\E$ we set infinite capacity $u_e:=\infty$. To ensure that the correct number of agents will arrive to the starting positions, we specify for a given $e'=(s,v_0^i)\in E_s$ the capacity $u_{c'}:=\sum_{q\in \A^f}p_0^q[i]$. Finally, to ensure that every reward will be collected by at most one agent, we specify $u_{e''}:=1$ for any $e''\in E_R$. 
 
-We are ready to provide the corresponding formulation of MCF. The goal is to assign flow values $h_e\in [0,\infty)$, which represent the amount of agents traversing $e$, to all edges $e\in \dE$ in order to minimize the expression $\sum_{e\in \dE}h_e c_e$ under the constraints 
+We are ready to provide the corresponding formulation of MCF. The goal is to assign flow values $h_e\in [0,\infty)$, which represent the number of agents traversing $e$, to all edges $e\in \dE$ in order to minimize the expression $\sum_{e\in \dE}h_e c_e$ under the constraints 
 \begin{subequations}
 \begin{align}
  h_{e}&\in [0,u_e],  \forall e\in \dE,\label{eq:mcf:bound}\\
@@ -339,7 +354,7 @@ We are ready to provide the corresponding formulation of MCF. The goal is to ass
 \end{subequations}
 Constraint \eqref{eq:mcf:bound} ensures that capacities are maintained; \eqref{eq:mcf:source} ensures that all the agents will leave the source; \eqref{eq:mcf:sink} ensures that all agents will end up at the sink vertex\footnote{For our specific graph structure $\dG$, and considering the constraint \eqref{eq:mcf:else}, the constraint \eqref{eq:mcf:sink} is redundant. We leave it for clarity and completeness.}; the final constraint ensures equality between the number of agents leaving and entering a vertex $v\in \dV\setminus \{s,g\}$.
 
-By definition of $\dG,c,u$ its clear that the above MCF formulation mimics the homogeneous problem, with one slight change. Namely, MCF permits fractional assignments to $h$, whereas the values of $x,z$ are integral. If all edge capacities are integral (which is the case in our setting), the linear relaxation of MCF enjoys a totally-unimodular constraint matrix form~\cite{AhujaETAL93}. Hence, the fractional solution will necessarily have an integer optimal solution. 
+By definition of $\dG,c,u$ its clear that the above MCF formulation is equivalent to the homogeneous problem, with one slight change. Namely, MCF permits fractional assignments to $h$, whereas the values of $x,z$ are integral. If all edge capacities are integral (which is the case in our setting), the linear relaxation of MCF enjoys a totally-unimodular constraint matrix form~\cite{AhujaETAL93}. Hence, the fractional solution will necessarily have an integer optimal solution. 
 
 We note that the above MCF problem can be solved in $\O((M'+N)\log N(M+N\log N))$ time using Orlin's MCF algorthim~\cite{Orlin93,Williamson2019}, where $M=|\dE|=\O(Tm)$, $N=|\dV|=\O(Tn)$, and $M'$ is the number of $\dG$ edges whose capacity is finite. In our case $M'=\O(Tn)$, which implies that the total time complexity of MCF is $\O(T^2mn\log n+T^2n^2\log^2n)$. 
 
@@ -358,7 +373,7 @@ Recall that we wish to find an assignment $x,y,z$ such that the expression $\R(x
 For a given $f\in \F$, denote by $x^f$ the corresponding values of the $x$ assignment for agents of fleet $f$, i.e., $x^f=\{x^f_{\tau}\}_{\tau\in [T-1]}$ for $\tau \in [T]$. The sets $y^f,z^f$ are similarly defined. 
 
 \subsection{Algorithm}
-We present the private-first-shared-first (\alg) algorithm for heterogeneous task allocation (see  Algorithm~\ref{alg:main}). It accepts as input the specification of the agents and the entire reward set $\dR=\{R^0,R^1,\ldots,R^F\}$. It then obtains two candidate solutions $(x,y,z),(x',y',z')$ and returns the one maximizing the reward for the heterogeneous problem. 
+We present the private-first-shared-first (\alg) algorithm for heterogeneous task allocation (see  Algorithm~\ref{alg:main}). It accepts as input the specification of the agents and the entire reward set $\dR=\{R^0,R^1,\ldots,R^F\}$. It then obtains two candidate solutions $(x,y,z),(x',y',z')$ and returns the one that yields the larger reward of the two. 
 
 \begin{algorithm}[!ht]
   $(x,y,z)\gets \private(\dR,p_0)$\;
@@ -392,7 +407,7 @@ In lines 4-8 the solutions of the individual fleets are combined to eliminate ca
   \label{alg:private}
 \end{algorithm} 
 
-The \shared subroutine (Algorithm~\ref{alg:shared}) prioritizes the assignment of shared rewards, by first computing the an assignment for all the agents $\A$ to the shared reward set $R^0$, to maximize the total reward. This is achieved by calling $\H(R^0,\A)$.  It then generates an updated reward set $\bar{R}^f$ for every fleet $f\in \F$, where the value of a reward $\bar{R}^f_\tau [j]$ is equal to $R^f_\tau [j]$ in case that $R^0_\tau[j]$ was not assigned to $f$, and otherwise equal to $R^f_\tau [j]+R^0_\tau[j]$. Next, for every fleet $f$ the private assignment $(x^f,z^f)$ over $\bar{R}^f$ is computed. Observe that $z$ represents simultaneously assignments for shared and private rewards.
+The \shared subroutine (Algorithm~\ref{alg:shared}) prioritizes the assignment of shared rewards, by first computing the an assignment for all the agents $\A$ to the shared reward set $R^0$, to maximize the total reward. This is achieved by calling $\H(R^0,p_0)$.  It then generates an updated reward set $\bar{R}^f$ for every fleet $f\in \F$, where the value of a reward $\bar{R}^f_\tau [j]$ is equal to $R^f_\tau [j]$ in case that $R^0_\tau[j]$ was not assigned to $f$, and otherwise equal to $R^f_\tau [j]+R^0_\tau[j]$. Next, for every fleet $f$ the private assignment $(x^f,z^f)$ over $\bar{R}^f$ is computed. Observe that $z$ represents simultaneously assignments for shared and private rewards.
 
 \begin{algorithm}[!ht]
     $(\bar{x},\bar{y})\gets \H(R^0,p_0)$\; 
@@ -415,18 +430,26 @@ In this section, we show that, for a given number of fleets $F$, the PFSF algori
 Let $(x,y,z)$ be an assignment returned by \alg. With a slight abuse of notation, we use $\R(x^f,y^f,z^f)$ to represent the reward obtained by agents of fleet $f\in \F$ (where assignments values of agents in other fleets are set to $0$). Similarly, $\R(x,y,\bm{0}), \R(x,\bm{0},z)$ represent the reward gained from shared rewards and private rewards, respectively, where $\bm{0}$ represents the zero vector (whose dimension will be clear from context). 
 
 Let $(X,Y,Z)$ be the optimal assignment. It will be convenient to define
-$\textsc{opt}:=\R(X,Y,Z)=\Delta\cdot O^* + O^*$, where 
-\begin{align*}O^*&:=\R(X,Y,\bm{0}), \\ \Delta \cdot O^*&:=\R(X,\bm{0},Z)=\sum_{f\in \F}\R({X}^f,\bm{0},{Z}^f),\end{align*}
-for some $\Delta>0$. We emphasize that the values of $\Delta, O^*$ are assumed to be unknown, and we use them strictly for the analysis. We are ready to state our main theoretical contribution:
+$\textsc{opt}:=\R(X,Y,Z)=S^*+P^*$, where 
+\begin{align*}S^*&:=\R(X,Y,\bm{0}), \\ P^*&:=\R(X,\bm{0},Z)=\sum_{f\in \F}\R({X}^f,\bm{0},{Z}^f).\end{align*}
+We are ready to state our main theoretical contribution:
 
 \begin{theorem}[Approximation factor of PFSF]\label{thm:main}
   Let $(x,y,z)$ be the solution returned by \alg. Then $\R(x,y,z)\geq \textsc{opt}\cdot \frac{F}{2F-1}$. 
 \end{theorem}
 
-Before proceeding to the proof of the main theorem, we establish two intermediate results, concerning the guarantees of \private and \shared, when considered separately. 
+Before proceeding to the proof of the main theorem, we establish two intermediate results, concerning the guarantees of \private and \shared, when considered separately. In particular, we show that each of the subroutines provide complementary approximations with respect to $S^*$ and $P^*$, and PFSF enjoys the best of both worlds. See illustration in Figure~\ref{fig:approximation}
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=2.5in]{approximation.png}
+    \caption{Visualization of the approximation factors (y-axis) achieved by PFSF (dashed blue curve), \private (green curve), \shared (red curve), as a function of the ratio between $S^*$ and OPT.}
+    \label{fig:approximation}
+\end{figure}
+
 
 \begin{lemma}Approximation factor of \private]\label{lem:private}
-  Let $(x,y,z)$ be the solution returned by \private. Then $\R(x,y,z)\geq \Delta\cdot  O^*+O^*\cdot F^{-1}$.
+  Let $(x,y,z)$ be the solution returned by \private. Then $\R(x,y,z)\geq \Delta\cdot  S^*\cdot F^{-1}+P^*$.
 \end{lemma}
 \begin{proof}
   Fix $f\in \F$ and note that
@@ -434,22 +457,23 @@ Before proceeding to the proof of the main theorem, we establish two intermediat
   since \private could choose to assign $(x^f,z^f)=(X,Y+Z)$ (line~2), which would yield the desired result. Hence,
 \begin{align*}
   \R(x,y,z)&=\sum_{f\in \F}\R(x^f,y^f,z^f)\\ & \geq  \sum_{f\in \F}\R\left({X}^f,\bm{0},{Z}^f\right)+F^{-1}\sum_{f\in \F}\R (X^f,Y^f,\bm{0}) \\ 
-& =\Delta \cdot O^* + F^{-1}\cdot O^*.
+& =P^* + F^{-1}\cdot S^*.
 \end{align*}
 \end{proof}
 
 \begin{lemma}[Approximation factor of \shared]\label{lem:shared}
-  Let $(x,y,z)$ be the solution returned by \shared. Then $\R(x,y,z)\geq O^*$.
+  Let $(x,y,z)$ be the solution returned by \shared. Then $\R(x,y,z)\geq S^*$.
 \end{lemma}
 \begin{proof}
   The proof is straightforward, as it must hold that $\R(\bar{x},\bar{y},\bm{0})\geq \R(X,Y,\bm{0})$, where $\bar{x},\bar{y}$ are as defined in line~1 of \shared.
 \end{proof}
 
-Now we are ready for the main proof:
+We are ready for the main proof:
 \begin{proof}[Proof of Theorem~\ref{thm:main}]
-Due to Lemma~\ref{lem:private}, and Lemma~\ref{lem:shared}, it is clear that \alg obtains a solution $(x,y,z)$ with reward at least $\max\left\{\Delta\cdot O^*+F^{-1}\cdot O^*,O^*\right\}$. We have that 
+Due to Lemma~\ref{lem:private}, and Lemma~\ref{lem:shared}, it is clear that \alg obtains a solution $(x,y,z)$ with reward at least $\max\left\{P^*+F^{-1}\cdot S^*,S^*\right\}$. Next, observe that if either of $S^*$ or $P^*$ is zero, the PFSF would necessarily return the optimal solution. Now, assume that $S^*$ and $P^*$ are strictly positive, and hence there exists $\Delta>0$ such that $P^*=\Delta S^*$. 
+We have that 
 \begin{align*}
-    \frac{\R(x,y,z)}{\R(X,Y,Z)} & \geq \frac{\max\left\{\Delta\cdot O^*+F^{-1}\cdot O^*,O^*\right\}}{\Delta O^*+O^*} \\ & 
+    \frac{\R(x,y,z)}{\R(X,Y,Z)} & \geq \frac{\max\left\{\Delta\cdot S^*+F^{-1}\cdot S^*,S^*\right\}}{\Delta S^*+S^*} \\ & 
     = \max\left\{\frac{\Delta+F^{-1}}{\Delta +1},\frac{1}{\Delta+1}\right\}\\ 
     & \geq 
     \max\left\{\frac{\frac{F-1}{F}+F^{-1}}{\frac{F-1}{F} +1},\frac{1}{\frac{F-1}{F}+1}\right\}\\ & = \frac{F}{2F-1},
@@ -463,7 +487,7 @@ We conclude this section with a computational analysis of the overall approach.
   \alg can be implemented in $\O(FT^2mn\log n+FT^2n^2\log^2n)$ time.
 \end{corollary}
 \begin{proof}
-  This result directly follows from Theorem~\ref{thm:homogeneous}, as we perform $2F+1$ computations of $\H$, where each computation is a bottleneck for both \private and \shared.
+  This result directly follows from Theorem~\ref{thm:homogeneous}, as we perform $2F+1$ computations of $\H$, where each computation is a bottleneck for both \private and \shared. \ksline{}{Consider elaborating how the flow decomposition is achieved.}
 \end{proof}
 
 \begin{comment}
@@ -506,16 +530,28 @@ z_\tau^q[j] & \forall j\in \V,  \thinspace \forall \tau \in \K_k \cup \{k + K_{\
 \label{tbl:problem_homo_relaxed_decomposed}
 \end{table*}
 
+\section{Experiments}\label{sec:experiments}
+
+\begin{table*}[]
+\centering
+\begin{tabular}{c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\cline{2-15}
+                             & \multicolumn{14}{c|}{time horizon}                                                                                                                                                \\ \cline{2-15} 
+ & \multicolumn{2}{c|}{2} & \multicolumn{2}{c|}{4} & \multicolumn{2}{c|}{8} & \multicolumn{2}{c|}{16} & \multicolumn{2}{c|}{32} & \multicolumn{2}{c|}{64} & \multicolumn{2}{c|}{128} \\ \hline \hline
+\multicolumn{1}{|c||}{fleets} & MILP & PFSF & MILP & PFSF & MILP & PFSF & MILP & PFSF & MILP & PFSF & MILP & PFSF & MILP & PFSF \\ \hline \hline
+\multicolumn{1}{|c||}{2} & 0.005 & 0.007 & 0.008 & 0.009 & 0.013 & 0.017 & 0.028 & 0.032 & 0.067 & 0.061 & 0.160 & 0.125 & 0.356 & 0.260 \\ \hline
+\multicolumn{1}{|c||}{4} & 0.018 & 0.014 & 0.038 & 0.026 & 0.074 & 0.048 & 0.162 & 0.091 & 0.386 & 0.166 & 0.900 & 0.346 & 1.773 & 0.665 \\ \hline 
+\multicolumn{1}{|c||}{8} & 0.114 & 0.038 & 0.256 & 0.070 & 0.583 & 0.135 & 1.390 & 0.247 & 3.615 & 0.464 & 12.053 & 0.940 & 21.023 & 1.854 \\ \hline
+\multicolumn{1}{|c||}{16} & 0.452 & 0.100 & 1.403 & 0.194 & 3.784 & 0.363 & 19.533 & 0.668 & 92.588 & 1.274 & 452.710 & 2.542 & DNF & 5.924 \\ \hline
+\multicolumn{1}{|c||}{32} & 1.488 & 0.287 & 5.642 & 0.520 & 19.782 & 0.996 & 283.860 & 1.870 & 567.163 & 3.757 & DNF & 7.107 & DNF & 15.738 \\ \hline
+\multicolumn{1}{|c||}{64} & 4.776 & 0.838 & 20.582 & 1.501 & 202.625 & 2.780 & DNF & 5.220 & DNF & 12.031 & DNF & 20.132 & DNF & 42.534 \\ \hline
+\multicolumn{1}{|c||}{128} & 14.202 & 2.481 & DNF & 4.855 & DNF & 8.247 & DNF & 16.538 & DNF & 30.999 & DNF & 58.792 & DNF & 115.464 \\ \hline
+\end{tabular}
+\end{table*}
+
+
+
 \section{Extensions}\label{sec:extensions}
-
-
-The rewad $\tau\in\T$ that appear in the environment according to a stochastic process.
-The tasks are drawn from a set $\T$, which is assumed to be known to all robots in advance.
-Each task $\tau$ is associated with a location $j_\tau \in \V$, a time $k_\tau\in \{1, \ldots, K_\text{final}\}$, a reward $T_\tau$, and a type  $t_\tau\in \{0, \ldots, F\}$.
-The type $t\in \{0, \ldots, F\}$ denotes the ability of agents to perform the task. Specifically, tasks of type $t=0$ are considered to be \emph{shared}, i.e., can be performed by any robot of any fleet $f\in \F:=\{1,\ldots,F\}$. In contrast, tasks of type $t \neq 0$ are considered to be \emph{private}, and can only be performed by agents from the particular fleet $\A^f$ such that $f=t$.
-%
-To avoid confusion, we reserve $t$ to denote a specific task, and $f$ to denote a specific fleet from $\F$. \ksline{-}{I like the new formulation. It seems more intuitive to treat tasks in different cells individually.}
- 
 Future tasks are \emph{not} known in advance---however, we assume that outstanding tasks (that is, tasks associated with the current time) are known, and that  a stochastic model of the evolution of tasks with respect to time is available. \frline{The extension to the case where such a model is learned online is an interesting direction for future research.}{Move to discussion}
  
 % denote as $\vec{\tau}=\{\tau: (\text{True}, \text{False}) \forall \tau\}$ a Boolean map where $\vec{\tau}_k[\tau]$ is true iff task $\tau$ is performed.
@@ -577,16 +613,7 @@ T_k^t[j] = \sum_{\tau: t_\tau=t, j_\tau = j, k_\tau = k} T_\tau \dP(\tau)
 
 
 
-To make those definition more concrete, suppose we have two tasks which represent tracking of two distinct objects (one in each task), where the reward for successful tracking are $1, 2$, respectively. Also assume that the objects are confined to a $3\times 3$ grid graph, and that in each time step, each object selects one of its neighbors uniformly at random (and cannot stay in the same vertex). 
-
-Figure \ref{fig:distribution_and_reward} shows the expected reward $T^t$ for the two task classes (depicted in blue and red respectively) across three time steps.
 %\frline{Below is an illustration for a specific instantiation of $\dT\in\Lambda_k$, where $T^0,T^1$ are depicted in blue and red, respectively, for time steps $\tau\in \{k,k+1,k+2\}$. We also depict $\dT_\mathbb{E}:=\Ex[\Lambda_k]$. }{1. This should be a figure. 2. I don't think there is a need to show $\dT$, only $\dT_\mathbb{E}$}
-\begin{figure}[h]
-\centering
-\includegraphics[width=.35\textwidth]{fig/distribution_and_reward.pdf}
-\caption{Expected reward for two task classes. The tasks require tracking of an object moving to adjacent cells according to a random walk.}
-\label{fig:distribution_and_reward}
-\end{figure}
 %{\scriptsize \begin{align*}
 %& \tau:  k \rightarrow k+1 \rightarrow k+2, \\ 
 %& \dT:  \begin{pmatrix}
