@@ -21,6 +21,7 @@
 \usepackage{calc}
 \usepackage{tikz}
 \usepackage{xfrac}
+\usepackage{array}
 \usepackage{bm}
 \def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (1,.7) -- (.25,.15) -- cycle;} 
 
@@ -31,6 +32,7 @@
 \usepackage{amsthm}
 \usepackage{comment}
 \usepackage{etoolbox}
+\usepackage{multirow}
 \AtBeginEnvironment{pmatrix}{\setlength{\arraycolsep}{4pt}}
 
 
@@ -531,25 +533,56 @@ z_\tau^q[j] & \forall j\in \V,  \thinspace \forall \tau \in \K_k \cup \{k + K_{\
 \end{table*}
 
 \section{Experiments}\label{sec:experiments}
+In this section we validate our theoretical results from the previous section through simulation experiments. In particular, we demonstrate that our PFSF algorithm  scales well and finds a near-optimal solutions fairly quickly on commodity hardware. Moreover, we show that our approach is faster than a MILP-based approach by several order of magnitude, and we observe that the approximation factors that we achieve are typically larger than the worst-case bound of $\frac{F}{2F-1}$. Additionally, in accordance with the complexity analysis, we observed experimentally that the running time of PFSF is not affected by number of agents within each fleet (as opposed to the number of fleets).
 
+\subsection{Implementation Details}
+All results were obtained using a commodity laptop equipped with 2.80GHz $\times$ 4 core i7-7600U CPU, and 16GB of RAM, running 64bit Ubuntu 18.04 OS. We implemented the PFSF algorithm in \cpp, where we used the \texttt{Lemon Graph Library} for the implementation of min-cost flow~\cite{Lemon}. To the best of our knowledge, this library provides the fastest implementation of min-cost flow algorithms~\cite{Kovacs15} (we mention that we used the network-simplex algorithm, which turned to be the fastest in our experiments). We compared our approach with a MILP-based solution using CPLEX~\cite{Cplex}.
+
+\newcolumntype{L}{>{\centering\arraybackslash}m{1cm}}
 \begin{table*}[]
 \centering
-\begin{tabular}{c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
-\cline{2-15}
-                             & \multicolumn{14}{c|}{time horizon}                                                                                                                                                \\ \cline{2-15} 
- & \multicolumn{2}{c|}{2} & \multicolumn{2}{c|}{4} & \multicolumn{2}{c|}{8} & \multicolumn{2}{c|}{16} & \multicolumn{2}{c|}{32} & \multicolumn{2}{c|}{64} & \multicolumn{2}{c|}{128} \\ \hline \hline
-\multicolumn{1}{|c||}{fleets} & MILP & PFSF & MILP & PFSF & MILP & PFSF & MILP & PFSF & MILP & PFSF & MILP & PFSF & MILP & PFSF \\ \hline \hline
-\multicolumn{1}{|c||}{2} & 0.005 & 0.007 & 0.008 & 0.009 & 0.013 & 0.017 & 0.028 & 0.032 & 0.067 & 0.061 & 0.160 & 0.125 & 0.356 & 0.260 \\ \hline
-\multicolumn{1}{|c||}{4} & 0.018 & 0.014 & 0.038 & 0.026 & 0.074 & 0.048 & 0.162 & 0.091 & 0.386 & 0.166 & 0.900 & 0.346 & 1.773 & 0.665 \\ \hline 
-\multicolumn{1}{|c||}{8} & 0.114 & 0.038 & 0.256 & 0.070 & 0.583 & 0.135 & 1.390 & 0.247 & 3.615 & 0.464 & 12.053 & 0.940 & 21.023 & 1.854 \\ \hline
-\multicolumn{1}{|c||}{16} & 0.452 & 0.100 & 1.403 & 0.194 & 3.784 & 0.363 & 19.533 & 0.668 & 92.588 & 1.274 & 452.710 & 2.542 & DNF & 5.924 \\ \hline
-\multicolumn{1}{|c||}{32} & 1.488 & 0.287 & 5.642 & 0.520 & 19.782 & 0.996 & 283.860 & 1.870 & 567.163 & 3.757 & DNF & 7.107 & DNF & 15.738 \\ \hline
-\multicolumn{1}{|c||}{64} & 4.776 & 0.838 & 20.582 & 1.501 & 202.625 & 2.780 & DNF & 5.220 & DNF & 12.031 & DNF & 20.132 & DNF & 42.534 \\ \hline
-\multicolumn{1}{|c||}{128} & 14.202 & 2.481 & DNF & 4.855 & DNF & 8.247 & DNF & 16.538 & DNF & 30.999 & DNF & 58.792 & DNF & 115.464 \\ \hline
+\begin{tabular}{Lc||c|c|c|c|c|c|c|}
+\cline{3-9}
+                                           &      & \multicolumn{7}{c|}{fleets}    \\ \hline
+\multicolumn{1}{|L||}{time horizon}         & criterion & 2 & 4 & 8 & 16 & 32 & 64 & 128 \\ \hline \hline
+\multicolumn{1}{|c||}{\multirow{3}{*}{2}}   & MILP & 0.00 & 0.01 & 0.01 & 0.03 & 0.07 & 0.16 & 0.36 \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & PFSF & 0.01 & 0.01 & 0.02 & 0.03 & 0.06 & 0.12 & 0.26   \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & APX  & 1.00 & 1.00 & 0.93 & 0.86 & 0.64 & 0.75 & 0.75   \\ \hline  \hline
+\multicolumn{1}{|c||}{\multirow{3}{*}{4}}   & MILP &  0.02 & 0.04 & 0.07 & 0.16 & 0.39 & 0.90 & 1.77  \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & PFSF & 0.01 & 0.03 & 0.05 & 0.09 & 0.17 & 0.35 & 0.67   \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & APX  &  1.00 & 0.97 & 0.87 & 0.86 & 0.77 & 0.74 & 0.85    \\ \hline  \hline
+\multicolumn{1}{|c||}{\multirow{3}{*}{8}}   & MILP &   0.11 & 0.26 & 0.58 & 1.39 & 3.62 & 12 & 21  \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & PFSF &  0.04 & 0.07 & 0.13 & 0.25 & 0.46 & 0.94 & 1.85   \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & APX  &  0.96 & 0.92 & 0.82 & 0.80 & 0.84 & 0.88 & 0.94     \\ \hline  \hline
+\multicolumn{1}{|c||}{\multirow{3}{*}{16}}  & MILP &  0.45 & 1.40 & 3.78 & 20 & 93 & 453 & DNF   \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & PFSF &  0.10 & 0.19 & 0.36 & 0.67 & 1.27 & 2.54 & 5.92   \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & APX  & 0.96 & 0.93 & 0.88 & 0.92 & 0.89 & 0.95 &     \\ \hline  \hline
+\multicolumn{1}{|c||}{\multirow{3}{*}{32}}  & MILP &  1.5 & 5.6 & 20 & 284 & 567 & DNF & DNF \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & PFSF &  0.29 & 0.52 & 1.00 & 1.87 & 3.76 & 7.11 & 16  \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & APX  &  0.94 & 0.89 & 0.82 & 0.88 & 0.94 &  &   \\ \hline \hline
+\multicolumn{1}{|c||}{\multirow{3}{*}{64}}  & MILP &  4.78 & 21 & 203 & DNF & DNF & DNF & DNF  \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & PFSF &  0.84 & 1.50 & 2.78 & 5.22 & 12 & 20 & 43 \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & APX  &  0.97 & 0.91 & 0.92 &  &  &  &      \\ \hline  \hline
+\multicolumn{1}{|c||}{\multirow{3}{*}{128}} & MILP & 14.20 & DNF & DNF & DNF & DNF & DNF & DNF    \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & PFSF &  2.48 & 4.85 & 8.25 & 17 & 31 & 59 & 115  \\ \cline{2-9} 
+\multicolumn{1}{|c||}{}                     & APX  &  0.96 &  &  &  &  &  &   \\ \hline  
 \end{tabular}
 \end{table*}
 
-
+\begin{table}[]
+\begin{tabular}{c|c|c|c|c|c|c|c|}
+\cline{2-8}
+                                   & \multicolumn{7}{c|}{fleets}    \\ \hline
+\multicolumn{1}{|L||}{time horizon} & 2 & 4 & 8 & 16 & 32 & 64 & 128 \\ \hline \hline
+\multicolumn{1}{|c||}{2}            & 0.1 & 0.2 & 0.4 & 0.8 & 1.4 & 4.8 & 7.3  \\ \hline
+\multicolumn{1}{|c||}{4}            & 0.3 & 0.6 & 1.1 & 2.2 & 4.2 & 13 & 19  \\ \hline
+\multicolumn{1}{|c||}{8}            &  1.0 & 1.6 & 3.2 & 6.6 & 12 & 38 & 55  \\ \hline
+\multicolumn{1}{|c||}{16}           &  3 & 5 & 9 & 19 & 35 & 118 & 214   \\ \hline
+\multicolumn{1}{|c||}{32}           &   9 & 14 & 29 & 59 & 132 & 214 & 414  \\ \hline
+\multicolumn{1}{|c||}{64}           &   31 & 48 & 100 & 189 & 375 & 700 & 1423  \\ \hline
+\multicolumn{1}{|c||}{128}          &  74 & 154 & 299 & 518 & 994 & 2040 & 4055   \\ \hline
+\end{tabular}
+\end{table}
 
 \section{Extensions}\label{sec:extensions}
 Future tasks are \emph{not} known in advance---however, we assume that outstanding tasks (that is, tasks associated with the current time) are known, and that  a stochastic model of the evolution of tasks with respect to time is available. \frline{The extension to the case where such a model is learned online is an interesting direction for future research.}{Move to discussion}
