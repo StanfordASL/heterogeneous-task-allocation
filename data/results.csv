@@ -1,2 +1,2 @@
 dimension,fleets,time_horizon,time_milp,time_cpp,val_milp,val_cpp
-10,32,32,400.5455951690674,4.20821,47762.0,48519.0
+50,32,32,DNF,139.002,DNF,199282.0

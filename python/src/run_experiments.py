@@ -8,10 +8,10 @@ import subprocess
 
 if __name__ == "__main__":
 
-    dimension = [10]
+    dimension = [50]
     fleets = [32] #fleets = [2, 4, 8, 16, 32, 64, 128]
     time_horizon = [32] #time_horizon = [2, 4, 8, 16, 32, 64, 128]
-    agents = 5
+    agents = 500
     intruders = 3
     repetitions = 1
     global_timeout = 600 #timeout in seconds
@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     for d in dimension:
         for f in fleets:
-            outer_milp_timeout = False
+            outer_milp_timeout = True
             outer_cpp_timeout = False
             
             for t in time_horizon:

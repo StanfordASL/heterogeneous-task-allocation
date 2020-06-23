@@ -275,7 +275,7 @@ The objective function is given in Equation~\eqref{eq:objective_het} in Table~\r
 Equations~\eqref{eq:bound_y_1}, \eqref{eq:bound_y_2}, \eqref{eq:bound_z_1}, \eqref{eq:bound_z_2} ensure that an agent is assigned to a task only if it is present in the corresponding vertex.    Equations~\eqref{eq:bound_y_3}, \eqref{eq:bound_z_3} limit the number of agents assigned to every type of task in a given vertex to $1$. 
 %\todo{Mention that we wish to solve this problem in a distributed manner.}
 
-\subsection{Predictive Formulation}
+\subsection{Predictive Formulation}\label{sec:predictive}
 We mention that that the above formulation can be easily adapted to the predictive setting. Namely, in this case the precise value of the rewards $R^0,\ldots,R^f$ are only known for the current timestep $\tau=0$, but a stochastic model of the evolution of rewards with respect to time is available in order to predict the rewards' behavior. To exploit the aforementioned deterministic formulation, it is straightforward to show that by plugging into the problem defined in Table~\ref{tbl:heterogeneous} the expected values of the stochastic rewards, the solution would maximize the expected gained reward. This in turn gives rise to a receding-horizon implementation: given the current state of the system (e.g., locations of agents and values of current rewards) we predict the reward values $R^0,\ldots,R^F$ for $T$ time steps into the future, and then compute a plan specified by $x,y,z$. We then execute this plan for the first time step, obtain current values of the reward, and repeat this process all over again. 
 
 We proceed to provide some concrete definitions and an example.
@@ -535,12 +535,30 @@ z_\tau^q[j] & \forall j\in \V,  \thinspace \forall \tau \in \K_k \cup \{k + K_{\
 \section{Experiments}\label{sec:experiments}
 In this section we validate our theoretical results from the previous section through simulation experiments. In particular, we demonstrate that our PFSF algorithm  scales well and finds a near-optimal solutions fairly quickly on commodity hardware. Moreover, we show that our approach is faster than a MILP-based approach by several order of magnitude, and we observe that the approximation factors that we achieve are typically larger than the worst-case bound of $\frac{F}{2F-1}$. Additionally, in accordance with the complexity analysis, we observed experimentally that the running time of PFSF is not affected by number of agents within each fleet (as opposed to the number of fleets).
 
-\subsection{Implementation Details}
+\subsection{Implementation and Scenario Details}
 All results were obtained using a commodity laptop equipped with 2.80GHz $\times$ 4 core i7-7600U CPU, and 16GB of RAM, running 64bit Ubuntu 18.04 OS. We implemented the PFSF algorithm in \cpp, where we used the \texttt{Lemon Graph Library} for the implementation of min-cost flow~\cite{Lemon}. To the best of our knowledge, this library provides the fastest implementation of min-cost flow algorithms~\cite{Kovacs15} (we mention that we used the network-simplex algorithm, which turned to be the fastest in our experiments). We compared our approach with a MILP-based solution using CPLEX~\cite{Cplex}.
 
+We tested both implementations on the predictive problem formulation described in Section~\ref{sec:predictive}. In particular, for a given graph structure $G$, time horizon $T$, fleets number $F$, and initial object count $I\in \dN_+$, we choose uniformly at random for each $t\in [F]$, $I$ vertices of $G$ (with repetitions) 
+which represent initial locations of objects to be tracked as part of task $t$. That is we set the values of $R^t_0$ to be the number of objects at the corresponding vertices. For the next time steps $\tau\in [T]\setminus \{0\}$ we set $R^t_\tau$ to be the expected reward assuming that the objects choose their locations in a uniform random fashion, as depicted in Figure~\ref{fig:distribution_and_reward}. We chose the initial locations of the agents in a uniform random fashion as well. 
+
+\subsection{Results}
+We report results for several test cases. In particular, we first compare the performance of the MILP solution and our PFSF algorithm, in terms of value of gained reward and running time. We then proceed to study the scalability of the PFSF algorithm on larger test cases. 
+
+\subsubsection{Comparison between PFSF and  MILP}
+In this setup, we fix the graph $G$ to be a $10\times 10$ grid, set the initial number of tracked objects for every task to be $I=3$, and set the number of agents within each fleet $f\in \F$ to be $a_f=5$ (below we test PFSF on much larger fleets with $a_f=500$). In Table~\ref{tbl:milp} we report the running time of the MILP solution and the PFSF algorithm, as well as the approximation factor that was achieved by PFSF, for scenarios of varying sizes. In particular, we set both the time horizon $T$ and the fleet number $F$ to be between $2$ and $128$. The numbers in the table represent the average results over $20$ randomly-generated scenarios for each parameter combination. We terminate the run of each of the algorithms if it exceeded a budget of $10$ minutes. 
+
+In terms of running time, we observe that MILP behaves similarly to PFSF only for the smallest test cases, e.g., when $T=2$. However, as the problem size increases the running time of MILP grows significantly faster than that of PFSF. For instance, already for $T=4$, when $F=2$ PFSF is nearly $3$ times faster than MILP, and when $F=128$ it is more than $20$ times faster. As $T$ is increased we start to see more scenarios in which the MILP was forced to time out, whereas PFSF finishes fairly quickly. For example, when $T=16$ PFSF finishes within a few seconds, for all fleet sizes, whereas MILP timeout for $F=128$, which yields a speedup of at least $100$ for PFSF. For $T=128$, MILP was able to solve only the smallest scenario, whereas PFSF solved all.
+
+In terms of solution quality, we observe that PFSF typically achieves approximation factors that are larger than the theoretical $F/(2F-1)$ lower bound, which suggest that the real lower bound should be higher. We note that the smallest approximation factor that we observed with PFSF is $0.64$.
+
+\subsubsection{Scalability of PFSF} 
+First we rerun the previous experiment with the PFSF algorithm for a larger grid graph of dimensions $50\times 50$ to test how the runtime of the algorithm is affected by its different parameters. We report in Table~\ref{rbl:pfsf} the runtime of the algorithm, where $I=3, a_f=5$ were set as in the previous experiment. In accordance with the theoretical complexity bound, we observe that the runtime increases linearly with the number of fleets $F$. Interestingly, the time horizon $T$ increases linearly as well, which suggests that theoretical quadratic increase is overly conservative. 
+
+Finally, we note that runtime of PFSF is only mildly affected by the size of each individual fleet. That is, when we increase the value of $a_f$ from $5$ to $50$ and $500$, we only observe a slight increase of no more than $\%10$ to the runtime. This is in contrast to the MILP based approach which is highly sensitive to this value. 
+
 \newcolumntype{L}{>{\centering\arraybackslash}m{1cm}}
+
 \begin{table*}[]
-\centering
 \begin{tabular}{Lc||c|c|c|c|c|c|c|}
 \cline{3-9}
                                            &      & \multicolumn{7}{c|}{fleets}    \\ \hline
@@ -567,6 +585,8 @@ All results were obtained using a commodity laptop equipped with 2.80GHz $\times
 \multicolumn{1}{|c||}{}                     & PFSF &  2.48 & 4.85 & 8.25 & 17 & 31 & 59 & 115  \\ \cline{2-9} 
 \multicolumn{1}{|c||}{}                     & APX  &  0.96 &  &  &  &  &  &   \\ \hline  
 \end{tabular}
+\vspace{5pt}
+\caption{Comparison between PFSF and a MILP-based solution in terms of running time and solution quality for $10\times 10$ grid graphs. For every combination of number of fleets $F$ and time horizon $T$ we report in the ``MILP'' and ``PFSF'' rows the corresponding running times (in seconds) of the two algorithms. The label ``DNF'' denotes that MILP did not finish within the 10 minutes time limit. In the ``APX'' row we report the approximation factor achieved by PFSF, i.e., denoting the quotient between the reward achieved by PFSF and optimal reward obtained by MILP (this value is only reported if MILP managed to find a solution within the time limit). \todo{need to fix the weird font in the table captions.}\label{tbl:milp}} 
 \end{table*}
 
 \begin{table}[]
@@ -582,6 +602,7 @@ All results were obtained using a commodity laptop equipped with 2.80GHz $\times
 \multicolumn{1}{|c||}{64}           &   31 & 48 & 100 & 189 & 375 & 700 & 1423  \\ \hline
 \multicolumn{1}{|c||}{128}          &  74 & 154 & 299 & 518 & 994 & 2040 & 4055   \\ \hline
 \end{tabular}
+\caption{Running time of PFSF for a $50\times 50$ grid graph. \label{tbl:pfsf}}
 \end{table}
 
 \section{Extensions}\label{sec:extensions}
