@@ -37,7 +37,7 @@
 
 
 \newif\ifmargincomments %A quick way of turning off margin comments for, say, arXiv submission
-\margincommentstrue
+\margincommentsfalse
 
 \newif\ifrelaxedv  % Toggle space-saving tricks
 \relaxedvfalse
@@ -63,6 +63,7 @@
 \newcommand{\sapmargin}[2]{#1}
 \newcommand{\ksmargin}[2]{#1}
 \newcommand{\ksline}[2]{#1}
+\newcommand{\frline}[2]{#1}
 \newcommand{\todo}[1]{}
 \fi
 
@@ -184,7 +185,8 @@ In general, to the best of our knowledge, no algorithm is available to solve the
 
 Our solution to the predictive task allocation problem entails solving, in real-time, a large-scale combinatorial optimization problem with uncertainty. We solve this large-scale combinatorial optimization problem in a distributed manner, in order to improve scalability and fault tolerance and reduce communication overheads. This further compounds complexity, due to the limited and asymmetrical information available to the robots. \frline{For these reasons, current approaches are mostly restricted to centralized or “shared world” solution frameworks -- a fundamental limitation that this paper overcomes.}{Revise once Saptarshi's distributed implementation comes through.} Furthermore, our approach guarantees a polynomial running time, and yields at least $1/2$-approximation for the optimal reward. 
 
-The organization of this paper is as follows. In Section~\ref{sec:problem_statement} we provide basic definitions and problem formulation. In Section~\ref{sec:centralized} we devise a polynomial-time near-optimal algorithm for the centralized setting of the problem. We then describe a distributed version of it in Section~\ref{sec:distributed_implementation}. In Section~\ref{sec:experiments} we provide experimental results. We conclude this work with discussion and future work in Section~\ref{sec:future}.
+The organization of this paper is as follows. In Section~\ref{sec:problem_statement} we provide basic definitions and problem formulation. In Section~\ref{sec:centralized} we devise a polynomial-time near-optimal algorithm for the centralized setting of the problem. %We then describe a distributed version of it in Section~\ref{sec:distributed_implementation}. 
+In Section~\ref{sec:experiments} we provide experimental results. We conclude this work with discussion and future work in Section~\ref{sec:future}.
 
 \begin{table*}[!ht]
     \noindent\fbox{
@@ -293,7 +295,7 @@ To make those definition more concrete, suppose we have two tasks which represen
 \subsection{Discussion}
 \todo{Mention the limitation of our model. Namely that we do not permit settings in which the reward changes based on our actions. }
 \todo{Mention that formulation can extend to travel cost.}
-We mention that a setting with a similar partition between agents has be explored in~\cite{PrasadETAL18}, albeit for a different problem formulation consisting of computing multiple travelling-salesman routes in an undirected and time-invariant graph. Table~\ref{tbl:problem} is a mixed-integer linear program, and its complexity scales exponentially with the number of variables. %Furthermore, the formulation is centralized, requiring a node to solve the full problem and then communicate to agents their allocations. %In this paper, we propose a distributed approximation algorithm that tackles both these difficulties. 
+We mention that a setting with a similar partition between agents has be explored in~\cite{PrasadETAL18}, albeit for a different problem formulation consisting of computing multiple travelling-salesman routes in an undirected and time-invariant graph. Table~\ref{tbl:heterogeneous} is a mixed-integer linear program, and its complexity scales exponentially with the number of variables. %Furthermore, the formulation is centralized, requiring a node to solve the full problem and then communicate to agents their allocations. %In this paper, we propose a distributed approximation algorithm that tackles both these difficulties. 
 In the following sections, we develop a centralized approximation algorithm that relies on solving a sequence of homogeneous subproblems. %linear programs, while a distributed implementation is proposed in Section~\ref{sec:distributed_implementation}.
 
 \section{Algorithm for the Homogeneous Case}
@@ -427,8 +429,6 @@ The \shared subroutine (Algorithm~\ref{alg:shared}) prioritizes the assignment o
 \subsection{Analysis}
 In this section, we show that, for a given number of fleets $F$, the PFSF algorithm is guaranteed to achieve a solution within a constant factor of the optimum. Then we provide a computational analysis of the approach.
 
-\todo{Define $S^*,P^*$ for the optimal value for the shared and private rewards. Consider two cases for the shared reward. Include in the main theorem a consideratin for the case that $P^*\neq 0$, in which case there exists $\Delta$ such that $S^*:=\Delta P^*$.}
-
 Let $(x,y,z)$ be an assignment returned by \alg. With a slight abuse of notation, we use $\R(x^f,y^f,z^f)$ to represent the reward obtained by agents of fleet $f\in \F$ (where assignments values of agents in other fleets are set to $0$). Similarly, $\R(x,y,\bm{0}), \R(x,\bm{0},z)$ represent the reward gained from shared rewards and private rewards, respectively, where $\bm{0}$ represents the zero vector (whose dimension will be clear from context). 
 
 Let $(X,Y,Z)$ be the optimal assignment. It will be convenient to define
@@ -552,13 +552,14 @@ In terms of running time, we observe that MILP behaves similarly to PFSF only fo
 In terms of solution quality, we observe that PFSF typically achieves approximation factors that are larger than the theoretical $F/(2F-1)$ lower bound, which suggest that the real lower bound should be higher. We note that the smallest approximation factor that we observed with PFSF is $0.64$.
 
 \subsubsection{Scalability of PFSF} 
-First we rerun the previous experiment with the PFSF algorithm for a larger grid graph of dimensions $50\times 50$ to test how the runtime of the algorithm is affected by its different parameters. We report in Table~\ref{rbl:pfsf} the runtime of the algorithm, where $I=3, a_f=5$ were set as in the previous experiment. In accordance with the theoretical complexity bound, we observe that the runtime increases linearly with the number of fleets $F$. Interestingly, the time horizon $T$ increases linearly as well, which suggests that theoretical quadratic increase is overly conservative. 
+First we rerun the previous experiment with the PFSF algorithm for a larger grid graph of dimensions $50\times 50$ to test how the runtime of the algorithm is affected by its different parameters. We report in Table~\ref{tbl:pfsf} the runtime of the algorithm, where $I=3, a_f=5$ were set as in the previous experiment. In accordance with the theoretical complexity bound, we observe that the runtime increases linearly with the number of fleets $F$. Interestingly, the time horizon $T$ increases linearly as well, which suggests that theoretical quadratic increase is overly conservative. 
 
 Finally, we note that runtime of PFSF is only mildly affected by the size of each individual fleet. That is, when we increase the value of $a_f$ from $5$ to $50$ and $500$, we only observe a slight increase of no more than $\%10$ to the runtime. This is in contrast to the MILP based approach which is highly sensitive to this value. 
 
 \newcolumntype{L}{>{\centering\arraybackslash}m{1cm}}
 
 \begin{table*}[]
+\centering
 \begin{tabular}{Lc||c|c|c|c|c|c|c|}
 \cline{3-9}
                                            &      & \multicolumn{7}{c|}{fleets}    \\ \hline
@@ -590,6 +591,7 @@ Finally, we note that runtime of PFSF is only mildly affected by the size of eac
 \end{table*}
 
 \begin{table}[]
+\centering
 \begin{tabular}{c|c|c|c|c|c|c|c|}
 \cline{2-8}
                                    & \multicolumn{7}{c|}{fleets}    \\ \hline
@@ -602,9 +604,11 @@ Finally, we note that runtime of PFSF is only mildly affected by the size of eac
 \multicolumn{1}{|c||}{64}           &   31 & 48 & 100 & 189 & 375 & 700 & 1423  \\ \hline
 \multicolumn{1}{|c||}{128}          &  74 & 154 & 299 & 518 & 994 & 2040 & 4055   \\ \hline
 \end{tabular}
-\caption{Running time of PFSF for a $50\times 50$ grid graph. \label{tbl:pfsf}}
+\vspace{5pt}
+\caption{Running time (seconds) of PFSF for a $50\times 50$ grid graph as a function of the fleets number $F$ and time horizon $T$. \label{tbl:pfsf}}
 \end{table}
 
+\begin{comment}
 \section{Extensions}\label{sec:extensions}
 Future tasks are \emph{not} known in advance---however, we assume that outstanding tasks (that is, tasks associated with the current time) are known, and that  a stochastic model of the evolution of tasks with respect to time is available. \frline{The extension to the case where such a model is learned online is an interesting direction for future research.}{Move to discussion}
  
@@ -874,6 +878,7 @@ Fig.~\ref{fig:sim_rewards} shows the rewards earned by the agents per time step 
     \caption{The left column shows the rewards earned per time step, where the left-top shows the rewards available and earned individually and the left-bottom shows the fractional rewards earned. The right column shows the accumulated rewards earned by the agents.}
     \label{fig:sim_rewards}
 \end{figure}
+\end{comment}
 
 \section{Conclusions}\label{sec:future}
 In this paper, we present a distributed predictive task assignment algorithm for heterogeneous agents. 
