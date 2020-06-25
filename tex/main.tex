@@ -622,9 +622,13 @@ Finally, we note that runtime of PFSF is only mildly affected by the size of eac
 \caption{Running time (seconds) of PFSF for a $50\times 50$ grid graph as a function of the fleets number $F$ and time horizon $T$. \label{tbl:pfsf}}
 \end{table}
 
-\section{Conclusion}
-In this work we studied the problem of predictive heterogeneous task-allocation and developed an efficient near-optimal algorithm termed PFSF. Our work suggests a few interesting directions for future research, which we highlight below. From an algorithmic perspective we plan to explore whether the approximation bound on the gained reward can be improved by potentially introducing a third subroutine, in addition to privateFirst and sharedFirst, which better estimates the cost in situations where the existing routines provide worse approximation (see Figure~\ref{fig:approximation}). We also aim to explore whether our algorithmic framework can be extended to the setting of the problem where collisions between agents should be avoided, is in the MAPF problem. Another important future endeavor would be to extend PFSF to the distributed setting, by possibly relying dual decomposition that would be applied to the homogeneous subproblems ~\cite[Chapter~7]{Ref:Bertsekas2016Nonlinear}.
+\section{Conclusion}\label{sec:future}
+In this paper, we present a predictive task assignment algorithm for heterogeneous agents. We prove the algorithm's optimality-bound and demonstrate its effectiveness using simulations. We envisage this algorithm will see wide-spread use in many multi-agent and swarm applications. 
+%Future work will focus on incorporating multiple types of tasks, especially event-triggered tasks, and different kinds of heterogeneity. 
 
+Our work suggests a few interesting directions for future research, which we highlight below. From an algorithmic perspective we plan to explore whether the approximation bound on the gained reward can be improved by potentially introducing a third subroutine, in addition to privateFirst and sharedFirst, which better estimates the cost in situations where the existing routines provide worse approximation (see Figure~\ref{fig:approximation}). We also aim to explore whether our algorithmic framework can be extended to the setting of the problem where collisions between agents should be avoided, is in the MAPF problem. Another important future endeavor would be to extend PFSF to the distributed setting, by possibly relying dual decomposition that would be applied to the homogeneous subproblems ~\cite[Chapter~7]{Ref:Bertsekas2016Nonlinear}.
+
+\todo{Anything else to mention?}
 
 
 \begin{comment}
