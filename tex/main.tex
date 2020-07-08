@@ -32,6 +32,15 @@
 \usepackage{amsthm}
 \usepackage{comment}
 \usepackage{etoolbox}
+% Hack to make the table captions non-smallcaps
+\makeatletter
+\patchcmd{\@makecaption}
+  {\scshape}
+  {}
+  {}
+  {}
+\makeatother
+%/hack 
 \usepackage{multirow}
 \AtBeginEnvironment{pmatrix}{\setlength{\arraycolsep}{4pt}}
 
@@ -140,10 +149,12 @@ In this paper we consider the following setting. We have several heterogeneous f
 \todo{Motivation for this specific model should go here.}
 
 \frmargin{A number of problems of interest fall in this setting. Consider for instance:
-\paragraph{Agile imaging from a spacecraft constellation} Consider a constellation of spacecraft orbits Mars studying dynamic events such as dust devils  (which can provide insight into the dust cycle on Mars) and new crater impacts (which can briefly expose the interior of the planet). Such dynamic events must be detected first, which can be done with a medium-resolution camera. Follow-up studies for dust devils require high temporal and spatial resolution, requiring fast cameras and fast-slewing spacecraft; conversely, to understand the interior composition of the planet exposed by craters, multispectral and hyperspectral imaging capabilities are required. High-quality priors are available for the spatial and temporal evolution of dust devils, and for the regions where orbital impacts may uncover relevant scientific information.
-\paragraph{Venus multi-balloon seismic survey} Consider a fleet of balloons, aided by an orbiter, navigating the clouds of Venus, looking for signs of volcanic eruptions and seismic activity with infrasound microphones. When an event is detected, several follow-ons can be planned (each requiring dedicated instrument capabilities), including: (i) capturing an image of ripples in the atmosphere from an orbiter, which can help localize the event and give insight into atmospheric dynamics; (ii) sample the eruption plume to understand its composition, which requires sampling equipment on board a balloon; and (iii) dropping a sonde into the eruption plume to study the vertical development of the plume and collect data closer to the surface, which requires availability of a drop sonde. Prior models of volcanic and seismic activity can inform the planning and steer the search towards areas where such events are more likely.
 \paragraph{Tracking} A fleet of heterogeneous vehicles can be tasked with tracking and identifying intruders in a bounded region. Any vehicle can detect an intruder and follow it to track its location; specially-equipped vehicles can further identify and study intruders with high-resolution cameras and other sensing modalities.
-\paragraph{Pick-up and delivery problems} Fleets of vehicles with heterogeneous seating capacity and capabilities (e.g., accommodation for disabilities) service transportation request. Any vehicle can service a single-rider transportation request; request for large parties or for passengers with disabilities must be fulfilled by vehicles belonging to the appropriate fleet.}{Added. Rough, but we have little time}
+\paragraph{Multi-mode sensing with an airborne fleet} A fleet of balloons, aided by an orbiter, can navigate the clouds of Venus, looking for signs of volcanic eruptions and seismic activity with infrasound microphones \cite{KrishnamoortyKomjathyEtAl2020}. When an event is detected, several follow-ons can be planned, each requiring dedicated instrument capabilities: (i) capturing an image of ripples in the atmosphere from an orbiter, which can help localize the event and give insight into atmospheric dynamics; (ii) sample the eruption plume to understand its composition, which requires sampling equipment on board a balloon; and (iii) dropping a sonde into the eruption plume to study the vertical development of the plume and collect data closer to the surface, which requires availability of a drop sonde. Prior models of volcanic and seismic activity can inform the planning and steer the search towards areas where such events are more likely.
+\paragraph{Pick-up and delivery problems} Fleets of autonomous vehicles with heterogeneous seating capacity and capabilities (e.g., accommodation for disabilities) can service transportation request on-demand in an urban environment \cite{Pavone2015}. Any vehicle can service a single-rider transportation request; request for large parties or for passengers with disabilities must be fulfilled by vehicles belonging to the appropriate fleet.
+\paragraph{Agile imaging from a spacecraft constellation} A constellation of imaging spacecraft orbiting Mars can provide unique insight into dynamic events such as dust devils  (which can provide insight into the dust cycle on the planet) and new crater impacts (which can briefly expose the subsurface, providing geological insight). Such dynamic events must be detected first, which can be done with a medium-resolution camera. Follow-up studies for dust devils require high temporal and spatial resolution, requiring fast cameras and fast-slewing spacecraft; conversely, to understand the interior composition of the planet exposed by craters, multispectral and hyperspectral imaging capabilities are required. High-quality priors are available for the spatial and temporal evolution of dust devils, and for the regions where orbital impacts may uncover relevant scientific information.
+
+}{Added. Rough, but we have little time}
 
 \subsection{Related work}
 %Predictive 
@@ -260,7 +271,7 @@ We consider a discrete-time, finite-horizon framework, where the horizon is spec
     \label{fig:workspace}
 \end{figure}
 
-Throughout this paper, we refer to the robots as "robots" or "agents" interchangeably. The set of all agents is denoted by $\A$, which is subdivided into $F$ disjoint fleets $\A^1,\ldots, \A^F$, where agents within the same fleet are considered to be of homogeneous capabilities.
+Throughout this paper, we refer to the robots as "robots" or "agents" interchangeably. The set of all agents is denoted by $\A$, which is subdivided into $F$ disjoint fleets $\A^1,\ldots, \A^F$, where agents within the same fleet are considered to be of homogeneous capabilities.  
 \frline{}{Comment on how this captures a number of cases of interest where there is a large population of agents belonging to two-three types, e.g. aerial and ground vehicles, or vehicles equipped with different sensor packets, etc.}
 We denote by $a_f=|\A^f|$ the number of agents in a given fleet $f$, and by $\F=\{1,\ldots,F\}$ the set of fleet indices. 
 
@@ -292,11 +303,14 @@ Equations~\eqref{eq:bound_y_1}, \eqref{eq:bound_y_2}, \eqref{eq:bound_z_1}, \eqr
 We mention that that the above formulation can be easily adapted to the predictive setting. Namely, in this case the precise value of the rewards $R^0,\ldots,R^f$ are only known for the current timestep $\tau=0$, but a stochastic model of the evolution of rewards with respect to time is available in order to predict the rewards' behavior. To exploit the aforementioned deterministic formulation, it is straightforward to show that by plugging into the problem defined in Table~\ref{tbl:heterogeneous} the expected values of the stochastic rewards, the solution would maximize the expected gained reward. This in turn gives rise to a receding-horizon implementation: given the current state of the system (e.g., locations of agents and values of current rewards) we predict the reward values $R^0,\ldots,R^F$ for $T$ time steps into the future, and then compute a plan specified by $x,y,z$. We then execute this plan for the first time step, obtain current values of the reward, and repeat this process all over again. 
 
 We proceed to provide some concrete definitions and an example.
-\ksline{I'm not sure how to write formally the definition for the evolving tasks. Can anyone assist?}
+\ksline{I'm not sure how to write formally the definition for the evolving tasks. Can anyone assist?}{}
+\frmargin{
+For example, when tracking a natural phenomenon (e.g. the evolution of dust devils, the dynamics of volcanic eruption plumes, or the movement of animals), high-fidelity models are available that predict the stochastic evolution of the model as a function of current observations.}{Added}
+
 
 For example, suppose we have two tasks which represent tracking of two distinct objects (one in each task), where the reward for successful tracking are $1, 2$, respectively. Also assume that the objects are confined to a $3\times 3$ grid graph, and that in each time step, each object selects one of its neighbors uniformly at random (and cannot stay in the same vertex). Figure \ref{fig:distribution_and_reward} shows the expected reward $R^t$ for the two task classes (depicted in blue and red respectively) across three time steps.
 
-Due to this relation between the predictive and static cases of the problem, and for simplicity of presentation, we will only work with the static case from now own (we do note that are experiments are for the predictive case). 
+Due to this relation between the predictive and static cases of the problem, and for simplicity of presentation, we will only work with the static case from now own (\frmargin{we do note that are experiments are for the predictive case}{Dubious grammar}). 
 
 \begin{figure}[h]
 \centering
@@ -308,7 +322,7 @@ Due to this relation between the predictive and static cases of the problem, and
 \subsection{Discussion}
 A few comments are in order. We note that both the problem formulation in Table~\ref{tbl:heterogeneous} and our approximation algorithm can be straightforwardly extend to a setting where the goal is to maximize the reward minus the travel cost, where the latter is represented by costs assigned to the edges of $G$. 
 
-We do mention that our problem formulation and algorithm do not account for collisions between agents that can arise when two or more agents reside in the same vertex of the graph, as is required in a MAPF formulation. However, for our specific application collisions are not an issue \todo{elaborate on this connecting to the application}?. We do mention that we plan to explore algorithmic extensions that avoid collisions as well (see Section~\ref{sec:future}).
+We do mention that our problem formulation and algorithm do not account for collisions between agents that can arise when two or more agents reside in the same vertex of the graph, as is required in a MAPF formulation. However, for our specific application collisions are not an issue: \frmargin{if the regions represented by the nodes are large enough, we empirically observe that collision avoidance can be handled by a lower-level routine with little loss of optimality.}{Added} \todo{elaborate on this connecting to the application}?. We do mention that we plan to explore algorithmic extensions that avoid collisions as well (see Section~\ref{sec:future}).
 
 We mention that a setting with a similar partition between homogeneous and heterogeneous subproblems has be explored in~\cite{PrasadETAL20}, albeit for a different problem formulation consisting of computing multiple travelling-salesman routes in an undirected and time-invariant graph. %Table~\ref{tbl:heterogeneous} is a mixed-integer linear program, and its complexity scales exponentially with the number of variables.
 
@@ -338,7 +352,7 @@ Given the graph $\G$, time horizon $T\in \dN_{>0}$, agent fleet $A^f$, initial p
 \caption{Definition of the heterogeneous task-allocation problem.}
 \end{table}
 
-For a given reward set $R^f$ and initial positions of $\A^f$ encoded through $0^f$, we denote by  $\H(R^f, p_0^f)$ the homogenenous optimization problem in Table \ref{tbl:homogeneous}.%, and the pair $(x^f,z^f)$ is the optimal solution of this homogeneous problem.
+For a given reward set $R^f$ and initial positions of $\A^f$ encoded through $0^f$, we denote by  $\H(R^f, p_0^f)$ the homogenenous optimization problem in Table \ref{tbl:homogeneous}. %, and the pair $(x^f,z^f)$ is the optimal solution of this homogeneous problem.
 Note that the problem of assigning the set of shared tasks $R^0$ to all the agents $\A$, while ignoring the assignment of private tasks, can be viewed as the homogeneous problem $\H(R^0,p)$.
  
 The motivation for considering the homogeneous case is given in the following theorem, which states that an optimal solution to this problem can be obtained in (low-degree) polynomial time.
@@ -607,7 +621,7 @@ Finally, we note that runtime of PFSF is only mildly affected by the size of eac
 \multicolumn{1}{|c||}{}                     & APX  &  0.96 &  &  &  &  &  &   \\ \hline  
 \end{tabular}
 \vspace{5pt}
-\caption{Comparison between PFSF and a MILP-based solution in terms of running time and solution quality for $10\times 10$ grid graphs. For every combination of number of fleets $F$ and time horizon $T$ we report in the ``MILP'' and ``PFSF'' rows the corresponding running times (in seconds) of the two algorithms. The label ``DNF'' denotes that MILP did not finish within the 10 minutes time limit. In the ``APX'' row we report the approximation factor achieved by PFSF, i.e., denoting the quotient between the reward achieved by PFSF and optimal reward obtained by MILP (this value is only reported if MILP managed to find a solution within the time limit). \todo{need to fix the weird font in the table captions.}\label{tbl:milp}} 
+\caption{Comparison between PFSF and a MILP-based solution in terms of running time and solution quality for $10\times 10$ grid graphs. For every combination of number of fleets $F$ and time horizon $T$ we report in the ``MILP'' and ``PFSF'' rows the corresponding running times (in seconds) of the two algorithms. The label ``DNF'' denotes that MILP did not finish within the 10 minutes time limit. In the ``APX'' row we report the approximation factor achieved by PFSF, i.e., denoting the quotient between the reward achieved by PFSF and optimal reward obtained by MILP (this value is only reported if MILP managed to find a solution within the time limit). \label{tbl:milp}} 
 \end{table*}
 
 \begin{table}[]
