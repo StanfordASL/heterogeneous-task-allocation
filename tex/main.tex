@@ -32,6 +32,7 @@
 \usepackage{amsthm}
 \usepackage{comment}
 \usepackage{etoolbox}
+
 % Hack to make the table captions non-smallcaps
 \makeatletter
 \patchcmd{\@makecaption}
@@ -41,6 +42,7 @@
   {}
 \makeatother
 %/hack 
+
 \usepackage{multirow}
 \AtBeginEnvironment{pmatrix}{\setlength{\arraycolsep}{4pt}}
 
@@ -128,7 +130,7 @@
 \input{macros.tex}
 
 %\title{Distributed Predictive Task Allocation in Multi-Robot Systems}
-\title{Fast Near-Optimal Heterogeneous Task Allocation via Homogeneous Decomposition}
+\title{Fast Near-Optimal Heterogeneous Task Allocation via Flow Decomposition}
 \author{Kiril Solovey$^1$, Saptarshi Bandyopadhyay$^2$,  Federico Rossi$^2$, Michael T. Wolf$^2$, and Marco Pavone$^1$
 \thanks{$^1$ K.\ Solovey and M.\ Pavone are with the Department of Aeronautics \& Astronautics, Stanford University, Stanford, CA, 94305, {\tt \{kirilsol,pavone\}@stanford.edu}.}
 \thanks{$^2$ S.\ Bandyopadhyay, F.\ Rossi, and M.\ T.\ Wolf are with the Jet Propulsion Laboratory, California Institute of Technology, Pasadena, CA, 91109, {\tt \{saptarshi.bandyopadhyay, federico.rossi, michael.t.wolf\}@jpl.nasa.gov}.}}
@@ -141,20 +143,17 @@
 Multi-robot systems are uniquely well-suited to perform complex tasks such as patrolling and tracking, information gathering, and pick-up and delivery problems, offering significantly higher performance than single-robot systems. A fundamental building block in most multi-robot systems is dynamic task allocation: assigning robots to tasks (e.g., patrolling an area, or servicing a transportation request) as they appear based on the robots' states to maximize reward. In many practical situations, the allocation must account for potentially heterogeneous capabilities (e.g., availability of appropriate sensors or actuators) to ensure the feasibility of execution, and exploit predictive information concerning the likelihood of future tasks to promote a higher reward over a long time horizon. To this end, we present an efficient algorithm for predictive heterogeneous task-allocation achieving an approximation factor of at least 1/2 of the optimal reward. Our approach demonstrates that the problem can be decomposed into several homogeneous subproblems that can be solved efficiently using min-cost flow. Through simulation experiments, we show that our algorithm is faster by several orders of magnitude than a MILP-based approach.
 \end{abstract}
 
-\section{Introduction}
+\section{Introduction}\label{sec:introduction}
 Multi-robot systems (i.e., groups of coordinated robots cooperating towards a common goal) are uniquely well-suited to perform tasks such as patrolling, information gathering, and pick-up and delivery problems, offering significantly higher performance compared to single-robot systems. A central problem in such multi-robot applications is \emph{predictive task allocation}: that is, to assign robots to outstanding, spatially-distributed tasks (e.g. patrolling an area or servicing a transportation request) based on the robots' states (e.g., position and power-level) and potentially heterogeneous capabilities (e.g., availability of appropriate sensors or actuators), and accounting not only for current tasks but also for the likelihood that future tasks will appear.
 
 % a high-level overview of the problem.
-In this paper we consider the following setting. We have several heterogeneous fleets of mobile robots, where every fleet consists of at least one robot (robots within the same fleet have homogeneous capabilities). The robots need to be assigned to several tasks, whose location is stochastic and time varying. (A task for example can be ``follow an intruder'', ``track an object'', or "image a scientific phenomenon".) Every fleet is associated with a unique \emph{private} task that it can execute and be rewarded for. In addition, any robot (regardless of the specific fleet they are associated with) can be assigned to and rewarded for executing a \emph{shared} task. In our setting, a robot is rewarded for a task if (i) it resides in the spatial vicinity of the task, (ii) the task is either shared or private to robot's specific fleet, and (iii) no other robot is assigned to this task. \ksline{-}{this is a good place to put an example or figure} 
-\todo{Motivation for this specific model should go here.}
+In this paper we consider the following setting. We have several heterogeneous fleets of mobile robots, where every fleet consists of at least one robot (robots within the same fleet have homogeneous capabilities). The robots need to be assigned to several tasks, whose location is stochastic and time varying. (A task for example can be ``follow an intruder'', ``track an object'', or "image a scientific phenomenon".) Every fleet is associated with a unique \emph{private} task that it can execute and be rewarded for. In addition, any robot (regardless of the specific fleet they are associated with) can be assigned to and rewarded for executing a \emph{shared} task. In our setting, a robot is rewarded for a task if (i) it resides in the spatial vicinity of the task, (ii) the task is either shared or private to robot's specific fleet, and (iii) no other robot is assigned to this task. 
 
-\frmargin{A number of problems of interest fall in this setting. Consider for instance:
-\paragraph{Tracking} A fleet of heterogeneous vehicles can be tasked with tracking and identifying intruders in a bounded region. Any vehicle can detect an intruder and follow it to track its location; specially-equipped vehicles can further identify and study intruders with high-resolution cameras and other sensing modalities.
-\paragraph{Multi-mode sensing with an airborne fleet} A fleet of balloons, aided by an orbiter, can navigate the clouds of Venus, looking for signs of volcanic eruptions and seismic activity with infrasound microphones \cite{KrishnamoortyKomjathyEtAl2020}. When an event is detected, several follow-ons can be planned, each requiring dedicated instrument capabilities: (i) capturing an image of ripples in the atmosphere from an orbiter, which can help localize the event and give insight into atmospheric dynamics; (ii) sample the eruption plume to understand its composition, which requires sampling equipment on board a balloon; and (iii) dropping a sonde into the eruption plume to study the vertical development of the plume and collect data closer to the surface, which requires availability of a drop sonde. Prior models of volcanic and seismic activity can inform the planning and steer the search towards areas where such events are more likely.
-\paragraph{Pick-up and delivery problems} Fleets of autonomous vehicles with heterogeneous seating capacity and capabilities (e.g., accommodation for disabilities) can service transportation request on-demand in an urban environment \cite{Pavone2015}. Any vehicle can service a single-rider transportation request; request for large parties or for passengers with disabilities must be fulfilled by vehicles belonging to the appropriate fleet.
-\paragraph{Agile imaging from a spacecraft constellation} A constellation of imaging spacecraft orbiting Mars can provide unique insight into dynamic events such as dust devils  (which can provide insight into the dust cycle on the planet) and new crater impacts (which can briefly expose the subsurface, providing geological insight). Such dynamic events must be detected first, which can be done with a medium-resolution camera. Follow-up studies for dust devils require high temporal and spatial resolution, requiring fast cameras and fast-slewing spacecraft; conversely, to understand the interior composition of the planet exposed by craters, multispectral and hyperspectral imaging capabilities are required. High-quality priors are available for the spatial and temporal evolution of dust devils, and for the regions where orbital impacts may uncover relevant scientific information.
-
-}{Added. Rough, but we have little time}
+A number of problems of interest fall in this setting. We are particularly motivated by the following applications of data gathering on Mars and Venus.
+\paragraph{Agile imaging from a spacecraft constellation} Consider a constellation of spacecraft orbits Mars studying dynamic events such as dust devils  (which can provide insight into the dust cycle on Mars) and new crater impacts (which can briefly expose the interior of the planet). Such dynamic events must be detected first, which can be done with a medium-resolution camera. Follow-up studies for dust devils require high temporal and spatial resolution, requiring fast cameras and fast-slewing spacecraft; conversely, to understand the interior composition of the planet exposed by craters, multispectral and hyperspectral imaging capabilities are required. High-quality priors are available for the spatial and temporal evolution of dust devils, and for the regions where orbital impacts may uncover relevant scientific information.
+\paragraph{Venus multi-balloon seismic survey} Consider a fleet of balloons, aided by an orbiter, navigating the clouds of Venus, looking for signs of volcanic eruptions and seismic activity with infrasound microphones \cite{KrishnamoortyKomjathyEtAl2020}. When an event is detected, several follow-ons can be planned (each requiring dedicated instrument capabilities), including: (i) capturing an image of ripples in the atmosphere from an orbiter, which can help localize the event and give insight into atmospheric dynamics; (ii) sample the eruption plume to understand its composition, which requires sampling equipment on board a balloon; and (iii) dropping a sonde into the eruption plume to study the vertical development of the plume and collect data closer to the surface, which requires availability of a drop sonde. Prior models of volcanic and seismic activity can inform the planning and steer the search towards areas where such events are more likely.
+%\paragraph{Tracking} A fleet of heterogeneous vehicles can be tasked with tracking and identifying intruders in a bounded region. Any vehicle can detect an intruder and follow it to track its location; specially-equipped vehicles can further identify and study intruders with high-resolution cameras and other sensing modalities.
+%\paragraph{Pick-up and delivery problems} Fleets of vehicles with heterogeneous seating capacity and capabilities (e.g., accommodation for disabilities) service transportation request. Any vehicle can service a single-rider transportation request; request for large parties or for passengers with disabilities must be fulfilled by vehicles belonging to the appropriate fleet.}{Added. Rough, but we have little time}
 
 \subsection{Related work}
 %Predictive 
@@ -162,9 +161,9 @@ Task allocation is an enabling subroutine for applications like closely coupled 
 
 A number of algorithm families have been proposed specifically for 
 %predictive 
-task allocation by the robotics community (see survey in~\cite{RossiBandyopadhyayEtAl2018}). In \emph{auction-based algorithms} \cite{Mataric04,Ayanian17}, robots bid on tasks based on their state and capabilities. Auction-based algorithms can be readily implemented in a distributed fashion and naturally accommodate heterogeneous robots. Spatial partitioning algorithms \cite{PavoneFrazzoliEtAl2011} rely on partitioning the workspace where the robots operate in regions and assigning each region to one or multiple robots. Tasks within a region are assigned to the robot (or robots) responsible for the region. Spatial partitioning algorithms capture the likelihood of occurrence of future events.%; however, they are \frline{not well-suited}{Weak wording} to heterogeneous robotic fleets. 
+task allocation by the robotics community (see survey in~\cite{RossiBandyopadhyayEtAl2018}). In \emph{auction-based algorithms} \cite{Mataric04,Ayanian17}, robots bid on tasks based on their state and capabilities. Auction-based algorithms can be readily implemented in a distributed fashion and naturally accommodate heterogeneous robots. Spatial partitioning algorithms \cite{PavoneFrazzoliEtAl2011} rely on partitioning the workspace where the robots operate in regions and assigning each region to one or multiple robots. Tasks within a region are assigned to the robot (or robots) responsible for the region. Spatial partitioning algorithms capture the likelihood of occurrence of future events. %; however, they are \frline{not well-suited}{Weak wording} to heterogeneous robotic fleets. 
 Team-forming and Temporal Partitioning Algorithms \cite{Smith09} group heterogeneous robots in teams so that each team is capable of performing all the tasks that might arise. %However, such algorithms generally require all robots to explicitly coordinate, foregoing a distributed implementation.
-Mixed-Integer Linear Programming (MILP)-based algorithms \cite{Bellingham03} explicitly represent the task allocation problem as a mixed-integer program. Algorithms in this class can readily capture a rich family of constraints and accommodate heterogeneous robot capabilities.%; however, they are generally not amenable to a distributed implementation, and they do not model the likelihood of future tasks occurring.
+Mixed-Integer Linear Programming (MILP)-based algorithms \cite{Bellingham03} explicitly represent the task allocation problem as a mixed-integer program. Algorithms in this class can readily capture a rich family of constraints and accommodate heterogeneous robot capabilities. %; however, they are generally not amenable to a distributed implementation, and they do not model the likelihood of future tasks occurring.
 Markov chain-based algorithms \cite{Bandyopadhyay17} model robots' motion according to a stochastic policy prescribed by a Markov chain optimized according to a given cost function. %The policies prescribed by such algorithms are amenable to a distributed implementation; however, formulations in this class are generally not amenable to heterogeneous robotic systems. 
 While all those approach cover a wide range of problems and techniques, they generally either do not scale well with the problem size or provide weak theoretical guarantees on the solution cost or runtime.
 
@@ -176,7 +175,7 @@ However, save a few special cases, VRP and OP  are typically approached with mix
 Finally, we mention that in case that the locations of the tasks are deterministic and known in advance, our problem can be cast into an instance of the multi-agent pathfinding (MAPF) problem~\cite{YuLaValle16}. Here the goal is to compute a collection of paths---one for each agent---such that a certain criteria is optimized, while accounting for inter-agent conflict constraints. In our setting, a constraint ensuring that a reward for a given task will be assigned to at most one agent in a given time step. Unfortunately, solving MAPF optimaly is NP-Hard~\cite{yu2013structure}, and no polynomial-time approximation algorithms that can solve general MAPF instances exist, to the best of our knowledge. We mention a recent approach for MAPF termed conflict-based search~\cite{felner2017search,ma2017lifelong,honig2018conflict,liu2019task} that earned some popularity due to its efficiency in moderately-sized instances. However, it does not provide run-time guarantees and do not scale well in settings that require considerable amount of coordination between agents. 
 
 \subsection{Contribution}
-In general, to the best of our knowledge, no algorithm is available to solve the \emph{predictive} task allocation problem for time-varying reward collection for teams of \emph{heterogeneous} \frmargin{robots}{I mean, MILPs can do this. Maybe you want to add "efficiently"?}. %
+In general, to the best of our knowledge, no algorithm is available to solve the \emph{predictive} task allocation problem for time-varying reward collection for teams of \emph{heterogeneous} efficiently.
 Thus, we present an efficient algorithm for predictive heterogeneous task-allocation achieving an approximation factor of at least 1/2 of the optimal reward. Our algorithm does not only enjoy from favorable guarantees in theory, but also good performance in practice. In particular, through simulation experiments, we show that our algorithm is faster by several orders of magnitude than a MILP-based approach, and its runtime scales modestly with the problem size. Moreover, we demonstrate that the runtime is insensitive to the number of agents preset in each fleet. From an algorithmic standpoint, our approach demonstrates that the heterogeneous problem can be decomposed into several homogeneous subproblems that can be solved efficiently using min-cost flow. 
 
 % \frline{(see Table~\ref{tab:task_allocation_lit_survey})}{If we are short on space, this should be the first thing to go}.
@@ -245,7 +244,7 @@ z_\tau^f[i]\in \{0,1\} & \forall i\in \V,  \thinspace f\in \F, \thinspace \foral
 
 
 \section{Preliminaries and problem formulation \label{sec:problem_statement}}
-We first describe the \frmargin{ingredient}{?} and then proceed to a formal definition of the problem.
+We first describe the problem ingredients and then proceed to a formal definition of the problem.
 %
 %\subsection{Notations}
 %Let $\dN$, $\dR$, and $\dR_{\geq 0}$ represent the set of natural numbers (positive integers), real numbers, and non-negative real numbers. 
@@ -254,7 +253,7 @@ We first describe the \frmargin{ingredient}{?} and then proceed to a formal defi
 %Let $|\cdot|$ represent the cardinality of a set.
 %
 %\subsection{Agents and Fleets \label{subsec:Agents}}
-The robots' workspace is represented by a directed graph $\G=(\V,\E)$, with vertices $i\in \V$ denoting physical regions for the robots, and edges $(i,j)\in \E$ denoting transitions between regions \frline{(See example in Fig.~\ref{fig:workspace}.)}{The text refers to a graph, but this figure is not a graph. Please redo. Or, if we are in a time crunch, upload source and I will update.} For a given $i\in \V$, we use $\E^+(i)$ to denote the set of all vertices $j \in \V$ such that $(i,j)\in \E$. We also define $\E^-(i)$ to be the set of all vertices $j \in \V$ such that $(j,i)\in \E$.
+The robots' workspace is represented by a directed graph $\G=(\V,\E)$, with vertices $i\in \V$ denoting physical regions for the robots, and edges $(i,j)\in \E$ denoting transitions between regions (See example in Fig.~\ref{fig:workspace}.) For a given $i\in \V$, we use $\E^+(i)$ to denote the set of all vertices $j \in \V$ such that $(i,j)\in \E$. We also define $\E^-(i)$ to be the set of all vertices $j \in \V$ such that $(j,i)\in \E$.
 
 We consider a discrete-time, finite-horizon framework, where the horizon is specified by some $T\in \dN_{>0}$. We use $\tau\in [T]$ to denote a given type step (without loss of generality, we assume that the current time step is $0$), where $[r]:=\{0,\ldots,r\}$ for a non-negative integer $r\in \dN_{\geq 0}$.
 
@@ -264,15 +263,14 @@ We consider a discrete-time, finite-horizon framework, where the horizon is spec
 % $$\E:=\{(i_{\tau},j_{\tau+1})|(i,j)\in E, \tau\in [T-1]\}.$$
 % This implies that each edge of $G$ takes one time step to traverse. 
 
-\begin{figure}[!ht]
+\begin{figure*}[!ht]
     \centering
-    \includegraphics[width=3.4in]{Workspace_intruders_new.png}
-    \caption{In this example, the workspace is partitioned into $80$ vertices. There are 2 kinds of heterogeneous agents (blue and red) that have to perform the tasks in the workspace. There are 2 kinds of private tasks (blue and red) for the 2 kinds of agents, and 1 kind of shared tasks (white) that can be done by any agent. \todo{Need to redo this figure.}}
+    \includegraphics[width=1.8\columnwidth,trim={3cm 1cm 1cm 1cm},clip]{task_allocation_figure.pdf}
+    \caption{Illustration of the problem setting. In this example, the workspace $\G$, which consists of three vertices $v_1, v_2, v_3$ and seven edges, is expanded over the time horizon $T=3$. There are $F$ fleets of heterogeneous agents, where $a_1=3$ (green), $a_2=2$ (red), $a_3=2$ (magenta), and the initial positions are illustrated for $\tau=0$. For every vertex $v\in \V$ and time step $\tau$, the values in the corresponding time-expanded vertex represent the following rewards: shared reward $R^0_\tau[v]$ (blue), and private reward $R^1_\tau[v], R^2_\tau[v], R^3_\tau[v]$ for fleets $1$ (green), $2$ (red), and $3$ (magenta), respectively.}
     \label{fig:workspace}
-\end{figure}
+\end{figure*}
 
-Throughout this paper, we refer to the robots as "robots" or "agents" interchangeably. The set of all agents is denoted by $\A$, which is subdivided into $F$ disjoint fleets $\A^1,\ldots, \A^F$, where agents within the same fleet are considered to be of homogeneous capabilities.  
-\frline{}{Comment on how this captures a number of cases of interest where there is a large population of agents belonging to two-three types, e.g. aerial and ground vehicles, or vehicles equipped with different sensor packets, etc.}
+Throughout this paper, we refer to the robots as "robots" or "agents" interchangeably. The set of all agents is denoted by $\A$, which is subdivided into $F$ disjoint fleets $\A^1,\ldots, \A^F$, where agents within the same fleet are considered to be of homogeneous capabilities.
 We denote by $a_f=|\A^f|$ the number of agents in a given fleet $f$, and by $\F=\{1,\ldots,F\}$ the set of fleet indices. 
 
 The agents are mobile and transition from one vertex $i\in \V$ to another $j\in \V$ every time step, assuming that $(i,j)\in E$.\footnote{Agents can stay put in vertex $i$ if $(i,i)\in \E$.}
@@ -302,11 +300,13 @@ Equations~\eqref{eq:bound_y_1}, \eqref{eq:bound_y_2}, \eqref{eq:bound_z_1}, \eqr
 \subsection{Predictive Formulation}\label{sec:predictive}
 We mention that that the above formulation can be easily adapted to the predictive setting. Namely, in this case the precise value of the rewards $R^0,\ldots,R^f$ are only known for the current timestep $\tau=0$, but a stochastic model of the evolution of rewards with respect to time is available in order to predict the rewards' behavior. To exploit the aforementioned deterministic formulation, it is straightforward to show that by plugging into the problem defined in Table~\ref{tbl:heterogeneous} the expected values of the stochastic rewards, the solution would maximize the expected gained reward. This in turn gives rise to a receding-horizon implementation: given the current state of the system (e.g., locations of agents and values of current rewards) we predict the reward values $R^0,\ldots,R^F$ for $T$ time steps into the future, and then compute a plan specified by $x,y,z$. We then execute this plan for the first time step, obtain current values of the reward, and repeat this process all over again. 
 
-We proceed to provide some concrete definitions and an example.
-\ksline{I'm not sure how to write formally the definition for the evolving tasks. Can anyone assist?}{}
-\frmargin{
-For example, when tracking a natural phenomenon (e.g. the evolution of dust devils, the dynamics of volcanic eruption plumes, or the movement of animals), high-fidelity models are available that predict the stochastic evolution of the model as a function of current observations.}{Added}
+% We proceed to provide some concrete definitions and an example.
+% \ksline{I'm not sure how to write formally the definition for the evolving tasks. Can anyone assist?}{}
+% \frmargin{
+% For example, when tracking a natural phenomenon (e.g. the evolution of dust devils, the dynamics of volcanic eruption plumes, or the movement of animals), high-fidelity models are available that predict the stochastic evolution of the model as a function of current observations.}{Added}
 
+%We proceed to provide some concrete definitions and an example.
+%\ksline{I'm not sure how to write formally the definition for the evolving tasks. Can anyone assist?}
 
 For example, suppose we have two tasks which represent tracking of two distinct objects (one in each task), where the reward for successful tracking are $1, 2$, respectively. Also assume that the objects are confined to a $3\times 3$ grid graph, and that in each time step, each object selects one of its neighbors uniformly at random (and cannot stay in the same vertex). Figure \ref{fig:distribution_and_reward} shows the expected reward $R^t$ for the two task classes (depicted in blue and red respectively) across three time steps.
 
@@ -322,12 +322,9 @@ Due to this relation between the predictive and static cases of the problem, and
 \subsection{Discussion}
 A few comments are in order. We note that both the problem formulation in Table~\ref{tbl:heterogeneous} and our approximation algorithm can be straightforwardly extend to a setting where the goal is to maximize the reward minus the travel cost, where the latter is represented by costs assigned to the edges of $G$. 
 
-We do mention that our problem formulation and algorithm do not account for collisions between agents that can arise when two or more agents reside in the same vertex of the graph, as is required in a MAPF formulation. However, for our specific application collisions are not an issue: \frmargin{if the regions represented by the nodes are large enough, we empirically observe that collision avoidance can be handled by a lower-level routine with little loss of optimality.}{Added} \todo{elaborate on this connecting to the application}?. We do mention that we plan to explore algorithmic extensions that avoid collisions as well (see Section~\ref{sec:future}).
+Our current problem formulation and algorithm do not account for collisions between agents that can arise when two or more agents reside in the same vertex of the graph, as is required in a MAPF formulation wherein agents are typically operating in close proximity to each other. However, for space applications, as we mention in Section~\ref{sec:introduction}, collisions are typically not an issue due to the vast areas over which the agents operate. We do mention that we plan to explore algorithmic extensions that avoid collisions as well (see Section~\ref{sec:future}).
 
-We mention that a setting with a similar partition between homogeneous and heterogeneous subproblems has be explored in~\cite{PrasadETAL20}, albeit for a different problem formulation consisting of computing multiple travelling-salesman routes in an undirected and time-invariant graph. %Table~\ref{tbl:heterogeneous} is a mixed-integer linear program, and its complexity scales exponentially with the number of variables.
-
-
-\todo{Any other remarks?}
+Finally, we mention that a setting with a similar partition between homogeneous and heterogeneous subproblems has be explored in~\cite{PrasadETAL20}, albeit for a different problem formulation consisting of computing multiple travelling-salesman routes in an undirected and time-invariant graph. %Table~\ref{tbl:heterogeneous} is a mixed-integer linear program, and its complexity scales exponentially with the number of variables.
 
  %Furthermore, the formulation is centralized, requiring a node to solve the full problem and then communicate to agents their allocations. %In this paper, we propose a distributed approximation algorithm that tackles both these difficulties. 
 %In the following sections, we develop a centralized approximation algorithm that relies on solving a sequence of homogeneous subproblems. %linear programs, while a distributed implementation is proposed in Section~\ref{sec:distributed_implementation}.
@@ -523,7 +520,7 @@ We conclude this section with a computational analysis of the overall approach.
   \alg can be implemented in $\O(FT^2mn\log n+FT^2n^2\log^2n)$ time.
 \end{corollary}
 \begin{proof}
-  This result directly follows from Theorem~\ref{thm:homogeneous}, as we perform $2F+1$ computations of $\H$, where each computation is a bottleneck for both \private and \shared. \ksline{}{Consider elaborating how the flow decomposition is achieved.}
+  This result directly follows from Theorem~\ref{thm:homogeneous}, as we perform $2F+1$ computations of $\H$, where each computation is a bottleneck for both \private and \shared. %\ksline{}{Consider elaborating how the flow decomposition is achieved.}
 \end{proof}
 
 \begin{comment}
@@ -532,7 +529,6 @@ We conclude this section with a computational analysis of the overall approach.
     \frline{- Is the approximation factor good? We get at least 1/2, which is surprisingly good. Plus, in simulations we show that in practical applications we do much better than that...or something.
     - The assumption that we know the distribution of tasks is strong. Future work will look at the setting where this distribution is learned on the fly, which introduces an interesting exploration/exploitation problem.
     - }{TODO}
-\end{comment}
 
 \begin{table*}[!ht]
 \noindent\fbox{\begin{minipage}[t]{1\textwidth - 2\fboxsep - 2\fboxrule}%
@@ -565,6 +561,7 @@ z_\tau^q[j] & \forall j\in \V,  \thinspace \forall \tau \in \K_k \cup \{k + K_{\
 \caption{Decomposition of the relaxed formulation of the homogeneous task-allocation problem $\H(T^f, \A^f)$ to be solved by agent $q \in \A^f$}
 \label{tbl:problem_homo_relaxed_decomposed}
 \end{table*}
+\end{comment}
 
 \section{Experiments}\label{sec:experiments}
 In this section we validate our theoretical results from the previous section through simulation experiments. In particular, we demonstrate that our PFSF algorithm  scales well and finds a near-optimal solutions fairly quickly on commodity hardware. Moreover, we show that our approach is faster than a MILP-based approach by several order of magnitude, and we observe that the approximation factors that we achieve in practice are better than the worst-case bound of $\frac{F}{2F-1}$. Additionally, in accordance with the complexity analysis, we observe experimentally that the running time of PFSF is unaffected by number of agents within each fleet (as opposed to the number of fleets).
@@ -588,11 +585,11 @@ In terms of solution quality, we observe that PFSF typically achieves approximat
 \subsubsection{Scalability of PFSF} 
 We rerun the previous experiment with the PFSF algorithm for a larger grid graph of dimensions $50\times 50$ to test how the runtime of the algorithm is affected by its different parameters. We report in Table~\ref{tbl:pfsf} the runtime of the algorithm, where $I=3, a_f=5$ were set as in the previous experiment. In accordance with the theoretical complexity bound, we observe that the runtime increases linearly with the number of fleets $F$. Interestingly, the time horizon $T$ increases linearly as well, which suggests that theoretical quadratic increase is overly conservative. 
 
-Finally, we note that runtime of PFSF is only mildly affected by the size of each individual fleet. That is, when we increase the value of $a_f$ from $5$ to $50$ and $500$, we only observe a slight increase of no more than $\%10$ to the runtime. This is in contrast to the MILP based approach which is highly sensitive to this value. \todo{Consider rerunning the experiments in the table with $a_f=500$ instead.}
+Finally, we note that runtime of PFSF is only mildly affected by the size of each individual fleet. That is, when we increase the value of $a_f$ from $5$ to $50$ and $500$, we only observe a slight increase of no more than $\%10$ to the runtime. This is in contrast to the MILP based approach which is highly sensitive to this value. %\todo{Consider rerunning the experiments in the table with $a_f=500$ instead.}
 
 \newcolumntype{L}{>{\centering\arraybackslash}m{1cm}}
 
-\begin{table*}[]
+\begin{table*}[t]
 \centering
 \begin{tabular}{Lc||c|c|c|c|c|c|c|}
 \cline{3-9}
@@ -621,7 +618,7 @@ Finally, we note that runtime of PFSF is only mildly affected by the size of eac
 \multicolumn{1}{|c||}{}                     & APX  &  0.96 &  &  &  &  &  &   \\ \hline  
 \end{tabular}
 \vspace{5pt}
-\caption{Comparison between PFSF and a MILP-based solution in terms of running time and solution quality for $10\times 10$ grid graphs. For every combination of number of fleets $F$ and time horizon $T$ we report in the ``MILP'' and ``PFSF'' rows the corresponding running times (in seconds) of the two algorithms. The label ``DNF'' denotes that MILP did not finish within the 10 minutes time limit. In the ``APX'' row we report the approximation factor achieved by PFSF, i.e., denoting the quotient between the reward achieved by PFSF and optimal reward obtained by MILP (this value is only reported if MILP managed to find a solution within the time limit). \label{tbl:milp}} 
+\caption{Comparison between PFSF and a MILP-based solution in terms of running time and solution quality for $10\times 10$ grid graphs. For every combination of number of fleets $F$ and time horizon $T$ we report in the ``MILP'' and ``PFSF'' rows the corresponding running times (in seconds) of the two algorithms. The label ``DNF'' denotes that MILP did not finish within the 10 minutes time limit. In the ``APX'' row we report the approximation factor achieved by PFSF, i.e., denoting the quotient between the reward achieved by PFSF and optimal reward obtained by MILP (this value is only reported if MILP managed to find a solution within the time limit).\label{tbl:milp}} 
 \end{table*}
 
 \begin{table}[]
@@ -646,9 +643,9 @@ Finally, we note that runtime of PFSF is only mildly affected by the size of eac
 In this paper, we present a predictive task assignment algorithm for heterogeneous agents. We prove the algorithm's optimality-bound and demonstrate its effectiveness using simulations. We envisage this algorithm will see wide-spread use in many multi-agent and swarm applications. 
 %Future work will focus on incorporating multiple types of tasks, especially event-triggered tasks, and different kinds of heterogeneity. 
 
-Our work suggests a few interesting directions for future research, which we highlight below. From an algorithmic perspective we plan to explore whether the approximation bound on the gained reward can be improved by potentially introducing a third subroutine, in addition to privateFirst and sharedFirst, which better estimates the cost in situations where the existing routines provide worse approximation (see Figure~\ref{fig:approximation}). We also aim to explore whether our algorithmic framework can be extended to the setting of the problem where collisions between agents should be avoided, is in the MAPF problem. Another important future endeavor would be to extend PFSF to the distributed setting, by possibly relying dual decomposition that would be applied to the homogeneous subproblems ~\cite[Chapter~7]{Ref:Bertsekas2016Nonlinear}.
+Our work suggests a few interesting directions for future research, which we highlight below. From an algorithmic perspective we plan to explore whether the approximation bound on the gained reward can be improved by potentially introducing a third subroutine, in addition to privateFirst and sharedFirst, which better estimates the cost in situations where the existing routines provide worse approximation (see Figure~\ref{fig:approximation}). We also aim to explore whether our algorithmic framework can be extended to the setting of the problem where collisions between agents should be avoided, as in the MAPF problem. Another important future endeavor would be to extend PFSF to the distributed setting, by possibly relying dual decomposition that would be applied to the homogeneous subproblems ~\cite[Chapter~7]{Ref:Bertsekas2016Nonlinear}.
 
-\todo{Anything else to mention?}
+%\todo{Anything else to mention?}
 
 
 \begin{comment}
@@ -923,15 +920,16 @@ Fig.~\ref{fig:sim_rewards} shows the rewards earned by the agents per time step 
 \end{figure}
 \end{comment}
 
-\section{Conclusions}\label{sec:future}
-In this paper, we present a distributed predictive task assignment algorithm for heterogeneous agents. 
-We prove the algorithm's optimality-bound and demonstrate its effectiveness using simulations. 
-We envisage this algorithm will see wide-spread use in many multi-agent and swarm applications. 
-Future work will focus on incorporating multiple types of tasks, especially event-triggered tasks, and different kinds of heterogeneity.  
+% \section{Conclusions}\label{sec:future}
+% In this paper, we present a distributed predictive task assignment algorithm for heterogeneous agents. 
+% We prove the algorithm's optimality-bound and demonstrate its effectiveness using simulations. 
+% We envisage this algorithm will see wide-spread use in many multi-agent and swarm applications. 
+% Future work will focus on incorporating multiple types of tasks, especially event-triggered tasks, and different kinds of heterogeneity. 
+
 
 
 \section*{Acknowledgments}
-Part of this research was carried out at the Jet Propulsion Laboratory, California Institute of Technology, under a contract with the National Aeronautics and Space Administration (80NM0018D0004).
+Part of this research was carried out at the Jet Propulsion Laboratory, California Institute of Technology, under a contract with the National Aeronautics and Space Administration (80NM0018D0004). The authors thank Xiaoshan Bai, Shushman Choudhury, Devansh Jolta, Erez Karpas, and Javier Alonso-Mora for fruitful discussions.
 
 {%\small
 \bibliographystyle{IEEEtran}
