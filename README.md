@@ -1,8 +1,5 @@
-# distributed-task-allocation
-Prototyping code for distributed task allocation
+# Fast Near-Optimal Heterogeneous Task Allocation via Flow Decomposition
+This repository contains a C++ implementation of the FlowDec algolrothim for heterogeneous task allocation, as described in the following publication:
 
-## MATLAB implementation
-The MATLAB implementation of the code is by Saptarshi Bandyopadhyay. It is contained in the `/matlab` folder.
-
-## Python implementation
-A Python implementation of the code by Kiril Solovey and Federico Rossi is available in the `python/src` folder.
+* Kiril Solovey, Saptarshi Bandyopadhyay, Federico Rossi, Michael T. Wolf, Marco Pavone:
+Fast Near-Optimal Heterogeneous Task Allocation via Flow Decomposition. *CoRR* abs/2011.03603, 2020. 
